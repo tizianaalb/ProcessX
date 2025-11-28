@@ -1,8 +1,8 @@
 import React from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position } from 'reactflow';
 import { PainPointBadge } from '../PainPointBadge';
 
-export const DecisionNode = React.memo(({ data }: NodeProps) => {
+export const DecisionNode = React.memo(({ data }: any) => {
   return (
     <div className="relative">
       <div className="bg-yellow-500 text-white transform rotate-45 w-28 h-28 flex items-center justify-center shadow-lg border-2 border-yellow-600">

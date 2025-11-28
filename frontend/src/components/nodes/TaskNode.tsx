@@ -1,8 +1,8 @@
 import React from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position } from 'reactflow';
 import { PainPointBadge } from '../PainPointBadge';
 
-export const TaskNode = React.memo(({ data }: NodeProps) => {
+export const TaskNode = React.memo(({ data }: any) => {
   return (
     <div className="relative">
       <div className="bg-blue-500 text-white rounded-lg p-4 shadow-lg min-w-[160px] border-2 border-blue-600">
