@@ -14,15 +14,18 @@ import ReactFlow, {
   BackgroundVariant,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { AlertTriangle, Plus, ChevronRight, ChevronLeft } from 'lucide-react';
 
 import { api } from '../lib/api';
-import type { Process, ProcessStep, ProcessStepInput, ProcessConnectionInput } from '../lib/api';
+import type { Process, ProcessStep, ProcessStepInput, ProcessConnectionInput, PainPoint, CreatePainPointData } from '../lib/api';
 import { StartNode } from '../components/nodes/StartNode';
 import { TaskNode } from '../components/nodes/TaskNode';
 import { DecisionNode } from '../components/nodes/DecisionNode';
 import { EndNode } from '../components/nodes/EndNode';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { PainPointModal } from '../components/PainPointModal';
+import { PainPointList } from '../components/PainPointList';
 
 const nodeTypes = {
   start: StartNode,
@@ -44,9 +47,18 @@ export const ProcessEditor = () => {
   const [processType, setProcessType] = useState<'AS_IS' | 'TO_BE'>('AS_IS');
   const [showCreateDialog, setShowCreateDialog] = useState(!id);
 
+  // Pain point state
+  const [painPoints, setPainPoints] = useState<PainPoint[]>([]);
+  const [loadingPainPoints, setLoadingPainPoints] = useState(false);
+  const [showPainPointModal, setShowPainPointModal] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [editingPainPoint, setEditingPainPoint] = useState<PainPoint | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   useEffect(() => {
     if (id) {
       loadProcess(id);
+      loadPainPoints(id);
     } else {
       setLoading(false);
     }
@@ -70,6 +82,8 @@ export const ProcessEditor = () => {
             label: step.name,
             duration: step.duration,
             description: step.description,
+            painPointCount: 0,
+            painPointSeverity: 'LOW',
           },
         })) || [];
 
@@ -93,6 +107,97 @@ export const ProcessEditor = () => {
       setLoading(false);
     }
   };
+
+  const loadPainPoints = async (processId: string) => {
+    try {
+      setLoadingPainPoints(true);
+      const response = await api.getPainPoints(processId);
+      setPainPoints(response.painPoints);
+
+      // Update nodes with pain point counts and highest severity
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          const nodePainPoints = response.painPoints.filter(
+            (pp) => pp.processStepId === node.id
+          );
+
+          if (nodePainPoints.length === 0) {
+            return {
+              ...node,
+              data: { ...node.data, painPointCount: 0, painPointSeverity: 'LOW' },
+            };
+          }
+
+          // Find highest severity
+          const severityOrder = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+          const highestSeverity = nodePainPoints.reduce((highest, pp) => {
+            return severityOrder[pp.severity] > severityOrder[highest]
+              ? pp.severity
+              : highest;
+          }, 'LOW' as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL');
+
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              painPointCount: nodePainPoints.length,
+              painPointSeverity: highestSeverity,
+            },
+          };
+        })
+      );
+    } catch (error: any) {
+      console.error('Failed to load pain points:', error);
+    } finally {
+      setLoadingPainPoints(false);
+    }
+  };
+
+  const handleCreatePainPoint = async (data: CreatePainPointData) => {
+    if (!process) return;
+    try {
+      await api.createPainPoint(process.id, data);
+      await loadPainPoints(process.id);
+      setShowPainPointModal(false);
+      setSelectedNode(null);
+      setEditingPainPoint(null);
+    } catch (error: any) {
+      throw error;
+    }
+  };
+
+  const handleEditPainPoint = (painPoint: PainPoint) => {
+    setEditingPainPoint(painPoint);
+    setShowPainPointModal(true);
+  };
+
+  const handleUpdatePainPoint = async (data: CreatePainPointData) => {
+    if (!process || !editingPainPoint) return;
+    try {
+      await api.updatePainPoint(editingPainPoint.id, data);
+      await loadPainPoints(process.id);
+      setShowPainPointModal(false);
+      setEditingPainPoint(null);
+    } catch (error: any) {
+      throw error;
+    }
+  };
+
+  const handleDeletePainPoint = async (id: string) => {
+    if (!process) return;
+    try {
+      await api.deletePainPoint(id);
+      await loadPainPoints(process.id);
+    } catch (error: any) {
+      alert('Failed to delete pain point: ' + error.message);
+    }
+  };
+
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    setSelectedNode(node);
+    setShowPainPointModal(true);
+    setEditingPainPoint(null);
+  }, []);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -310,6 +415,18 @@ export const ProcessEditor = () => {
         </div>
 
         <div className="flex gap-2">
+          <Button
+            onClick={() => {
+              setSelectedNode(null);
+              setEditingPainPoint(null);
+              setShowPainPointModal(true);
+            }}
+            disabled={!process}
+            className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2"
+          >
+            <AlertTriangle size={16} />
+            Add Pain Point
+          </Button>
           <Button onClick={handleSave} disabled={saving || !process} className="bg-blue-600 hover:bg-blue-700 text-white">
             {saving ? 'Saving...' : 'Save Process'}
           </Button>
@@ -351,22 +468,81 @@ export const ProcessEditor = () => {
         </Button>
       </div>
 
-      {/* ReactFlow Canvas */}
-      <div className="flex-1">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          fitView
-          attributionPosition="bottom-left"
-        >
-          <Controls />
-          <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-        </ReactFlow>
+      {/* ReactFlow Canvas with Pain Point Sidebar */}
+      <div className="flex-1 flex relative">
+        <div className="flex-1">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={handleNodeClick}
+            nodeTypes={nodeTypes}
+            fitView
+            attributionPosition="bottom-left"
+          >
+            <Controls />
+            <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+          </ReactFlow>
+        </div>
+
+        {/* Pain Point Sidebar */}
+        {process && (
+          <div
+            className={`bg-white border-l shadow-lg transition-all duration-300 ${
+              sidebarOpen ? 'w-96' : 'w-0'
+            } overflow-hidden flex flex-col`}
+          >
+            <div className="p-4 border-b flex items-center justify-between bg-gray-50">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="text-orange-500" size={20} />
+                <h3 className="font-semibold text-gray-900">
+                  Pain Points ({painPoints.length})
+                </h3>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <PainPointList
+                painPoints={painPoints}
+                onEdit={handleEditPainPoint}
+                onDelete={handleDeletePainPoint}
+                loading={loadingPainPoints}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Sidebar Toggle Button (when closed) */}
+        {process && !sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 bg-white border border-r-0 rounded-l-lg p-2 shadow-lg hover:bg-gray-50"
+          >
+            <ChevronLeft size={20} />
+          </button>
+        )}
       </div>
+
+      {/* Pain Point Modal */}
+      <PainPointModal
+        isOpen={showPainPointModal}
+        onClose={() => {
+          setShowPainPointModal(false);
+          setSelectedNode(null);
+          setEditingPainPoint(null);
+        }}
+        onSubmit={editingPainPoint ? handleUpdatePainPoint : handleCreatePainPoint}
+        processStepId={selectedNode?.id}
+        processStepName={selectedNode?.data.label}
+        existingPainPoint={editingPainPoint || undefined}
+      />
 
       {/* Instructions */}
       {nodes.length === 0 && (

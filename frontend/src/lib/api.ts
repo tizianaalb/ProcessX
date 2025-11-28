@@ -109,6 +109,82 @@ export interface ProcessConnectionInput {
   type?: 'DEFAULT' | 'CONDITIONAL';
 }
 
+// Pain Point interfaces
+export interface PainPoint {
+  id: string;
+  processId: string;
+  processStepId?: string;
+  identifiedById: string;
+  category:
+    | 'BOTTLENECK'
+    | 'REWORK'
+    | 'WASTE'
+    | 'MANUAL_PROCESS'
+    | 'COMPLIANCE_RISK'
+    | 'SYSTEM_LIMITATION'
+    | 'COMMUNICATION_GAP';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  title: string;
+  description: string;
+  impact?: string;
+  estimatedCost?: number;
+  estimatedTime?: number;
+  frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY';
+  isAiDetected: boolean;
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'DISMISSED';
+  processStep?: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  identifiedBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePainPointData {
+  processStepId?: string;
+  category:
+    | 'BOTTLENECK'
+    | 'REWORK'
+    | 'WASTE'
+    | 'MANUAL_PROCESS'
+    | 'COMPLIANCE_RISK'
+    | 'SYSTEM_LIMITATION'
+    | 'COMMUNICATION_GAP';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  title: string;
+  description: string;
+  impact?: string;
+  estimatedCost?: number;
+  estimatedTime?: number;
+  frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY';
+}
+
+export interface UpdatePainPointData {
+  category?:
+    | 'BOTTLENECK'
+    | 'REWORK'
+    | 'WASTE'
+    | 'MANUAL_PROCESS'
+    | 'COMPLIANCE_RISK'
+    | 'SYSTEM_LIMITATION'
+    | 'COMMUNICATION_GAP';
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  title?: string;
+  description?: string;
+  impact?: string;
+  estimatedCost?: number;
+  estimatedTime?: number;
+  frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY';
+  status?: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'DISMISSED';
+}
+
 class ApiClient {
   private baseURL: string;
 
@@ -223,6 +299,54 @@ class ApiClient {
         body: JSON.stringify({ connections }),
       }
     );
+  }
+
+  // Pain Point endpoints
+  async getPainPoints(processId: string): Promise<{ painPoints: PainPoint[] }> {
+    return this.request<{ painPoints: PainPoint[] }>(
+      `/api/processes/${processId}/pain-points`,
+      {
+        method: 'GET',
+      }
+    );
+  }
+
+  async getPainPoint(id: string): Promise<{ painPoint: PainPoint }> {
+    return this.request<{ painPoint: PainPoint }>(`/api/pain-points/${id}`, {
+      method: 'GET',
+    });
+  }
+
+  async createPainPoint(
+    processId: string,
+    data: CreatePainPointData
+  ): Promise<{ painPoint: PainPoint; message: string }> {
+    return this.request<{ painPoint: PainPoint; message: string }>(
+      `/api/processes/${processId}/pain-points`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async updatePainPoint(
+    id: string,
+    data: UpdatePainPointData
+  ): Promise<{ painPoint: PainPoint; message: string }> {
+    return this.request<{ painPoint: PainPoint; message: string }>(
+      `/api/pain-points/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async deletePainPoint(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/pain-points/${id}`, {
+      method: 'DELETE',
+    });
   }
 }
 

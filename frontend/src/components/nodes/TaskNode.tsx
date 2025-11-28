@@ -1,5 +1,6 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
+import { PainPointBadge } from '../PainPointBadge';
 
 export const TaskNode = React.memo(({ data }: NodeProps) => {
   return (
@@ -17,6 +18,12 @@ export const TaskNode = React.memo(({ data }: NodeProps) => {
           </div>
         )}
       </div>
+      {data.painPointCount > 0 && (
+        <PainPointBadge
+          count={data.painPointCount}
+          severity={data.painPointSeverity}
+        />
+      )}
       <Handle
         type="target"
         position={Position.Left}

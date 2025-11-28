@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
 import processRoutes from './routes/process.routes.js';
+import painPointRoutes from './routes/painpoint.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -37,6 +38,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/processes', processRoutes);
+app.use('/api', painPointRoutes);
 
 app.get('/api', (req, res) => {
   res.json({
@@ -46,6 +48,7 @@ app.get('/api', (req, res) => {
       health: '/health',
       auth: '/api/auth/*',
       processes: '/api/processes/*',
+      painPoints: '/api/processes/:processId/pain-points',
     },
   });
 });

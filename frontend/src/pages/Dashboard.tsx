@@ -227,7 +227,7 @@ export const Dashboard: React.FC = () => {
               </Button>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              Pain point analysis and optimization features coming in Phase 3...
+              Click on any process to start mapping and identify pain points in your workflows.
             </p>
           </div>
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
+import { PainPointBadge } from '../PainPointBadge';
 
 export const EndNode = React.memo(({ data }: NodeProps) => {
   return (
@@ -7,6 +8,12 @@ export const EndNode = React.memo(({ data }: NodeProps) => {
       <div className="bg-red-500 text-white rounded-full w-20 h-20 flex items-center justify-center font-bold shadow-lg border-2 border-red-600">
         <span className="text-sm">END</span>
       </div>
+      {data.painPointCount > 0 && (
+        <PainPointBadge
+          count={data.painPointCount}
+          severity={data.painPointSeverity}
+        />
+      )}
       <Handle
         type="target"
         position={Position.Left}
