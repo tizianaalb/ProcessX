@@ -1,0 +1,269 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Organizations (Multi-tenancy)
+model Organization {
+  id              String    @id @default(uuid())
+  name            String
+  logoUrl         String?   @map("logo_url")
+  brandingConfig  Json?     @map("branding_config")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  users           User[]
+  processes       Process[]
+  templates       ProcessTemplate[]
+
+  @@map("organizations")
+}
+
+// Users
+model User {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  firstName       String?   @map("first_name")
+  lastName        String?   @map("last_name")
+  role            String    @default("editor") // admin, editor, viewer
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdProcesses      Process[] @relation("ProcessCreator")
+  painPointsIdentified  PainPoint[] @relation("PainPointIdentifier")
+  targetProcesses       TargetProcess[] @relation("TargetProcessCreator")
+  exports              Export[]
+  auditLogs            AuditLog[]
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("users")
+}
+
+// Processes
+model Process {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  createdById     String    @map("created_by_id")
+  name            String
+  description     String?
+  category        String?   // claims, underwriting, policy, etc.
+  status          String    @default("draft") // draft, active, archived
+  version         Int       @default(1)
+  parentProcessId String?   @map("parent_process_id") // for versioning
+  metadata        Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy       User @relation("ProcessCreator", fields: [createdById], references: [id])
+  parentProcess   Process? @relation("ProcessVersions", fields: [parentProcessId], references: [id])
+
+  childVersions   Process[] @relation("ProcessVersions")
+  steps           ProcessStep[]
+  connections     ProcessConnection[]
+  painPoints      PainPoint[]
+  recommendations Recommendation[]
+  targetProcesses TargetProcess[]
+  exports         Export[]
+
+  @@index([organizationId])
+  @@index([createdById])
+  @@index([category])
+  @@index([status])
+  @@map("processes")
+}
+
+// Process Steps
+model ProcessStep {
+  id                    String    @id @default(uuid())
+  processId             String    @map("process_id")
+  stepNumber            Int       @map("step_number")
+  name                  String
+  description           String?
+  stepType              String    @map("step_type") // task, decision, start, end
+  responsibleRole       String?   @map("responsible_role")
+  department            String?
+  estimatedDuration     Int?      @map("estimated_duration") // in minutes
+  requiredSystems       String[]  @map("required_systems")
+  inputs                String[]
+  outputs               String[]
+  complianceRequirements String[] @map("compliance_requirements")
+  positionX             Float?    @map("position_x")
+  positionY             Float?    @map("position_y")
+  metadata              Json?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  process               Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+
+  sourceConnections     ProcessConnection[] @relation("SourceStep")
+  targetConnections     ProcessConnection[] @relation("TargetStep")
+  painPoints            PainPoint[]
+
+  @@index([processId])
+  @@map("process_steps")
+}
+
+// Process Connections (Edges)
+model ProcessConnection {
+  id            String    @id @default(uuid())
+  processId     String    @map("process_id")
+  sourceStepId  String    @map("source_step_id")
+  targetStepId  String    @map("target_step_id")
+  condition     String?   // for decision branches
+  metadata      Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  process       Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  sourceStep    ProcessStep @relation("SourceStep", fields: [sourceStepId], references: [id], onDelete: Cascade)
+  targetStep    ProcessStep @relation("TargetStep", fields: [targetStepId], references: [id], onDelete: Cascade)
+
+  @@index([processId])
+  @@map("process_connections")
+}
+
+// Pain Points
+model PainPoint {
+  id                String    @id @default(uuid())
+  processId         String    @map("process_id")
+  stepId            String?   @map("step_id")
+  identifiedById    String    @map("identified_by_id")
+  category          String    // bottleneck, error, manual, compliance, etc.
+  severity          String    // low, medium, high, critical
+  title             String
+  description       String?
+  impactAssessment  String?   @map("impact_assessment")
+  rootCause         String?   @map("root_cause")
+  supportingEvidence String[] @map("supporting_evidence")
+  isAiDetected      Boolean   @default(false) @map("is_ai_detected")
+  status            String    @default("open") // open, in_progress, resolved
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  process           Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  step              ProcessStep? @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  identifiedBy      User @relation("PainPointIdentifier", fields: [identifiedById], references: [id])
+
+  recommendations   Recommendation[]
+
+  @@index([processId])
+  @@index([stepId])
+  @@map("pain_points")
+}
+
+// Recommendations
+model Recommendation {
+  id                  String    @id @default(uuid())
+  processId           String    @map("process_id")
+  painPointId         String?   @map("pain_point_id")
+  recommendationType  String    @map("recommendation_type") // automation, elimination, reorder, etc.
+  title               String
+  description         String?
+  implementationSteps String[]  @map("implementation_steps")
+  estimatedEffort     String?   @map("estimated_effort") // low, medium, high
+  estimatedImpact     Json?     @map("estimated_impact") // time_saved, cost_reduction, etc.
+  priorityScore       Int?      @map("priority_score")
+  status              String    @default("proposed") // proposed, approved, implemented, rejected
+  generatedBy         String    @map("generated_by") // ai, manual
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  process             Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  painPoint           PainPoint? @relation(fields: [painPointId], references: [id], onDelete: SetNull)
+
+  @@index([processId])
+  @@map("recommendations")
+}
+
+// Target Processes (Optimized versions)
+model TargetProcess {
+  id                    String    @id @default(uuid())
+  sourceProcessId       String    @map("source_process_id")
+  name                  String
+  description           String?
+  businessRequirements  Json?     @map("business_requirements")
+  implementationRoadmap Json?     @map("implementation_roadmap")
+  impactAnalysis        Json?     @map("impact_analysis")
+  createdById           String    @map("created_by_id")
+  status                String    @default("proposed") // proposed, approved, in_progress, implemented
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  sourceProcess         Process @relation(fields: [sourceProcessId], references: [id], onDelete: Cascade)
+  createdBy             User @relation("TargetProcessCreator", fields: [createdById], references: [id])
+
+  @@index([sourceProcessId])
+  @@map("target_processes")
+}
+
+// Process Templates
+model ProcessTemplate {
+  id              String    @id @default(uuid())
+  organizationId  String?   @map("organization_id") // null = public template
+  name            String
+  description     String?
+  category        String?
+  industrySector  String    @default("insurance") @map("industry_sector")
+  templateData    Json      @map("template_data") // full process structure
+  previewImageUrl String?   @map("preview_image_url")
+  isPublic        Boolean   @default(true) @map("is_public")
+  usageCount      Int       @default(0) @map("usage_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([isPublic])
+  @@map("process_templates")
+}
+
+// Exports
+model Export {
+  id          String    @id @default(uuid())
+  processId   String    @map("process_id")
+  userId      String    @map("user_id")
+  exportType  String    @map("export_type") // pptx, pdf, xlsx, docx, png, svg
+  fileUrl     String?   @map("file_url")
+  fileSizeBytes BigInt? @map("file_size_bytes")
+  exportConfig Json?    @map("export_config")
+  status      String    @default("pending") // pending, completed, failed
+  errorMessage String?  @map("error_message")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  process     Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id])
+
+  @@index([processId])
+  @@index([userId])
+  @@map("exports")
+}
+
+// Audit Logs
+model AuditLog {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  entityType  String    @map("entity_type") // process, step, pain_point, etc.
+  entityId    String    @map("entity_id")
+  action      String    // create, update, delete, export
+  changes     Json?
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

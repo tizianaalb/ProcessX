@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProcessX Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .status {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: green; }
+        .error { color: red; }
+        h1 { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="status">
+        <h1>ProcessX Frontend Test</h1>
+        <p class="success">✓ Static HTML is working</p>
+        <p class="success">✓ Vite server is running</p>
+        <p class="success">✓ You can access the frontend from Windows</p>
+
+        <h2>Next Steps:</h2>
+        <ol>
+            <li>Go back to <a href="/">http://localhost:5200</a></li>
+            <li>Open browser DevTools (F12)</li>
+            <li>Check Console tab for any JavaScript errors</li>
+            <li>Check Network tab to see if files are loading</li>
+        </ol>
+
+        <h2>Backend Status:</h2>
+        <p id="backend-status">Checking...</p>
+
+        <script>
+            fetch('http://localhost:3100/health')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('backend-status').innerHTML =
+                        '<span class="success">✓ Backend is running: ' + data.status + '</span>';
+                })
+                .catch(err => {
+                    document.getElementById('backend-status').innerHTML =
+                        '<span class="error">✗ Backend not accessible: ' + err.message + '</span>';
+                });
+        </script>
+    </div>
+</body>
+</html>
