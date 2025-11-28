@@ -1,11 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../lib/api';
 
 export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [processCount, setProcessCount] = useState(0);
+  const [painPointCount, setPainPointCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const response = await api.getProcesses();
+      setProcessCount(response.processes.length);
+
+      const totalPainPoints = response.processes.reduce(
+        (sum, p) => sum + (p._count?.painPoints || 0),
+        0
+      );
+      setPainPointCount(totalPainPoints);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -67,7 +92,9 @@ export const Dashboard: React.FC = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         Total Processes
                       </dt>
-                      <dd className="text-lg font-semibold text-gray-900">0</dd>
+                      <dd className="text-lg font-semibold text-gray-900">
+                        {loading ? '...' : processCount}
+                      </dd>
                     </dl>
                   </div>
                 </div>
@@ -97,7 +124,9 @@ export const Dashboard: React.FC = () => {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         Pain Points
                       </dt>
-                      <dd className="text-lg font-semibold text-gray-900">0</dd>
+                      <dd className="text-lg font-semibold text-gray-900">
+                        {loading ? '...' : painPointCount}
+                      </dd>
                     </dl>
                   </div>
                 </div>
@@ -140,7 +169,11 @@ export const Dashboard: React.FC = () => {
               Quick Actions
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Button variant="outline" className="justify-start" disabled>
+              <Button
+                variant="outline"
+                className="justify-start"
+                onClick={() => navigate('/processes/new')}
+              >
                 <svg
                   className="mr-2 h-5 w-5"
                   fill="none"
@@ -156,7 +189,11 @@ export const Dashboard: React.FC = () => {
                 </svg>
                 Create New Process
               </Button>
-              <Button variant="outline" className="justify-start" disabled>
+              <Button
+                variant="outline"
+                className="justify-start"
+                onClick={() => navigate('/processes')}
+              >
                 <svg
                   className="mr-2 h-5 w-5"
                   fill="none"
@@ -170,7 +207,7 @@ export const Dashboard: React.FC = () => {
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                View Templates
+                View All Processes
               </Button>
               <Button variant="outline" className="justify-start" disabled>
                 <svg
@@ -190,7 +227,7 @@ export const Dashboard: React.FC = () => {
               </Button>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              Process mapping and optimization features coming soon...
+              Pain point analysis and optimization features coming in Phase 3...
             </p>
           </div>
 
@@ -217,9 +254,8 @@ export const Dashboard: React.FC = () => {
                 </h3>
                 <div className="mt-2 text-sm text-blue-700">
                   <p>
-                    Welcome to ProcessX! Your account is set up and ready to go.
-                    Process mapping, pain point analysis, and optimization features
-                    are currently in development.
+                    Welcome to ProcessX! You can now create and edit process maps.
+                    Click "Create New Process" to get started, or "View All Processes" to see your existing processes.
                   </p>
                 </div>
               </div>

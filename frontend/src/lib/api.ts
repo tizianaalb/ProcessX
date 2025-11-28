@@ -29,6 +29,86 @@ export interface LoginData {
   password: string;
 }
 
+// Process interfaces
+export interface Process {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'AS_IS' | 'TO_BE';
+  status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+  version: number;
+  organizationId: string;
+  createdById: string;
+  createdBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  steps?: ProcessStep[];
+  connections?: ProcessConnection[];
+  _count?: {
+    steps: number;
+    painPoints: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProcessStep {
+  id: string;
+  processId: string;
+  name: string;
+  description?: string;
+  type: 'START' | 'TASK' | 'DECISION' | 'END';
+  order: number;
+  duration?: number;
+  positionX: number;
+  positionY: number;
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProcessConnection {
+  id: string;
+  processId: string;
+  sourceStepId: string;
+  targetStepId: string;
+  label?: string;
+  type: 'DEFAULT' | 'CONDITIONAL';
+  createdAt: string;
+}
+
+export interface CreateProcessData {
+  name: string;
+  description?: string;
+  type?: 'AS_IS' | 'TO_BE';
+}
+
+export interface UpdateProcessData {
+  name?: string;
+  description?: string;
+  status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+  type?: 'AS_IS' | 'TO_BE';
+}
+
+export interface ProcessStepInput {
+  name: string;
+  description?: string;
+  type?: 'START' | 'TASK' | 'DECISION' | 'END';
+  duration?: number;
+  position: { x: number; y: number };
+  metadata?: any;
+}
+
+export interface ProcessConnectionInput {
+  sourceStepId: string;
+  targetStepId: string;
+  label?: string;
+  type?: 'DEFAULT' | 'CONDITIONAL';
+}
+
 class ApiClient {
   private baseURL: string;
 
@@ -84,6 +164,65 @@ class ApiClient {
     return this.request<{ user: User }>('/api/auth/me', {
       method: 'GET',
     });
+  }
+
+  // Process endpoints
+  async getProcesses(): Promise<{ processes: Process[] }> {
+    return this.request<{ processes: Process[] }>('/api/processes', {
+      method: 'GET',
+    });
+  }
+
+  async getProcess(id: string): Promise<{ process: Process }> {
+    return this.request<{ process: Process }>(`/api/processes/${id}`, {
+      method: 'GET',
+    });
+  }
+
+  async createProcess(data: CreateProcessData): Promise<{ process: Process; message: string }> {
+    return this.request<{ process: Process; message: string }>('/api/processes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProcess(id: string, data: UpdateProcessData): Promise<{ process: Process; message: string }> {
+    return this.request<{ process: Process; message: string }>(`/api/processes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProcess(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/processes/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async addProcessSteps(
+    processId: string,
+    steps: ProcessStepInput[]
+  ): Promise<{ steps: ProcessStep[]; message: string }> {
+    return this.request<{ steps: ProcessStep[]; message: string }>(
+      `/api/processes/${processId}/steps`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ steps }),
+      }
+    );
+  }
+
+  async addProcessConnections(
+    processId: string,
+    connections: ProcessConnectionInput[]
+  ): Promise<{ connections: ProcessConnection[]; message: string }> {
+    return this.request<{ connections: ProcessConnection[]; message: string }>(
+      `/api/processes/${processId}/connections`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ connections }),
+      }
+    );
   }
 }
 

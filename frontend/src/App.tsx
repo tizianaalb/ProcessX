@@ -4,6 +4,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
+import { ProcessList } from './pages/ProcessList';
+import { ProcessEditor } from './pages/ProcessEditor';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
@@ -19,6 +21,38 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/processes"
+            element={
+              <ProtectedRoute>
+                <ProcessList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/processes/new"
+            element={
+              <ProtectedRoute>
+                <ProcessEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/processes/:id"
+            element={
+              <ProtectedRoute>
+                <ProcessEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/processes/:id/edit"
+            element={
+              <ProtectedRoute>
+                <ProcessEditor />
               </ProtectedRoute>
             }
           />
