@@ -56,8 +56,9 @@ model Process {
   createdById     String    @map("created_by_id")
   name            String
   description     String?
+  type            String    @default("AS_IS") // AS_IS, TO_BE
   category        String?   // claims, underwriting, policy, etc.
-  status          String    @default("draft") // draft, active, archived
+  status          String    @default("DRAFT") // DRAFT, ACTIVE, ARCHIVED
   version         Int       @default(1)
   parentProcessId String?   @map("parent_process_id") // for versioning
   metadata        Json?
@@ -87,19 +88,19 @@ model Process {
 model ProcessStep {
   id                    String    @id @default(uuid())
   processId             String    @map("process_id")
-  stepNumber            Int       @map("step_number")
+  order                 Int       // Step order in process
   name                  String
   description           String?
-  stepType              String    @map("step_type") // task, decision, start, end
+  type                  String    @default("TASK") // START, TASK, DECISION, END
+  duration              Int?      // in minutes
   responsibleRole       String?   @map("responsible_role")
   department            String?
-  estimatedDuration     Int?      @map("estimated_duration") // in minutes
-  requiredSystems       String[]  @map("required_systems")
-  inputs                String[]
-  outputs               String[]
-  complianceRequirements String[] @map("compliance_requirements")
-  positionX             Float?    @map("position_x")
-  positionY             Float?    @map("position_y")
+  requiredSystems       String[]  @default([]) @map("required_systems")
+  inputs                String[]  @default([])
+  outputs               String[]  @default([])
+  complianceRequirements String[] @default([]) @map("compliance_requirements")
+  positionX             Float     @map("position_x")
+  positionY             Float     @map("position_y")
   metadata              Json?
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
@@ -120,7 +121,8 @@ model ProcessConnection {
   processId     String    @map("process_id")
   sourceStepId  String    @map("source_step_id")
   targetStepId  String    @map("target_step_id")
-  condition     String?   // for decision branches
+  label         String?   // Label for the connection
+  type          String    @default("DEFAULT") // DEFAULT, CONDITIONAL
   metadata      Json?
   createdAt     DateTime  @default(now()) @map("created_at")
 
@@ -136,28 +138,29 @@ model ProcessConnection {
 model PainPoint {
   id                String    @id @default(uuid())
   processId         String    @map("process_id")
-  stepId            String?   @map("step_id")
+  processStepId     String?   @map("process_step_id")
   identifiedById    String    @map("identified_by_id")
-  category          String    // bottleneck, error, manual, compliance, etc.
-  severity          String    // low, medium, high, critical
+  category          String    // BOTTLENECK, REWORK, WASTE, MANUAL_PROCESS, COMPLIANCE_RISK, SYSTEM_LIMITATION, COMMUNICATION_GAP
+  severity          String    // LOW, MEDIUM, HIGH, CRITICAL
   title             String
-  description       String?
-  impactAssessment  String?   @map("impact_assessment")
-  rootCause         String?   @map("root_cause")
-  supportingEvidence String[] @map("supporting_evidence")
+  description       String
+  impact            String?   // Description of business impact
+  estimatedCost     Int?      @map("estimated_cost") // Annual cost in currency
+  estimatedTime     Int?      @map("estimated_time") // Time wasted per occurrence in minutes
+  frequency         String?   // DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUALLY
   isAiDetected      Boolean   @default(false) @map("is_ai_detected")
-  status            String    @default("open") // open, in_progress, resolved
+  status            String    @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, DISMISSED
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   process           Process @relation(fields: [processId], references: [id], onDelete: Cascade)
-  step              ProcessStep? @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  processStep       ProcessStep? @relation(fields: [processStepId], references: [id], onDelete: Cascade)
   identifiedBy      User @relation("PainPointIdentifier", fields: [identifiedById], references: [id])
 
   recommendations   Recommendation[]
 
   @@index([processId])
-  @@index([stepId])
+  @@index([processStepId])
   @@map("pain_points")
 }
 
