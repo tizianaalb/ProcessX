@@ -1,20 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactFlow, {
-  Node,
-  Edge,
   Controls,
   Background,
   applyNodeChanges,
   applyEdgeChanges,
   addEdge,
-  Connection,
-  NodeChange,
-  EdgeChange,
   BackgroundVariant,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { AlertTriangle, Plus, ChevronRight, ChevronLeft } from 'lucide-react';
+
+// Types for ReactFlow
+type Node = any;
+type Edge = any;
+type NodeChange = any;
+type EdgeChange = any;
+type Connection = any;
 
 import { api } from '../lib/api';
 import type { Process, ProcessStep, ProcessStepInput, ProcessConnectionInput, PainPoint, CreatePainPointData } from '../lib/api';
