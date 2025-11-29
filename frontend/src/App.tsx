@@ -6,6 +6,8 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { ProcessList } from './pages/ProcessList';
 import { ProcessEditor } from './pages/ProcessEditor';
+import { ProcessAnalyze } from './pages/ProcessAnalyze';
+import { ProcessRecommendations } from './pages/ProcessRecommendations';
 import Settings from './pages/Settings';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
@@ -54,6 +56,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProcessEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/processes/:processId/analyze"
+            element={
+              <ProtectedRoute>
+                <ProcessAnalyze />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/processes/:processId/recommendations"
+            element={
+              <ProtectedRoute>
+                <ProcessRecommendations />
               </ProtectedRoute>
             }
           />

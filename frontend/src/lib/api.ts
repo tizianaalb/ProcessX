@@ -185,6 +185,77 @@ export interface UpdatePainPointData {
   status?: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'DISMISSED';
 }
 
+// AI Analysis interfaces
+export interface AIAnalysis {
+  id: string;
+  processId: string;
+  analysisType: 'FULL' | 'PAIN_POINTS' | 'RECOMMENDATIONS' | 'TO_BE';
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  understanding?: any;
+  detectedPainPoints?: any[];
+  recommendations?: any[];
+  generatedProcess?: any;
+  aiProvider: string;
+  modelId?: string;
+  tokensUsed?: number;
+  cost?: number;
+  errorMessage?: string;
+  initiatedById: string;
+  completedAt?: string;
+  createdAt: string;
+  process?: {
+    name: string;
+    type: string;
+  };
+  initiatedBy?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  processRecommendations?: ProcessRecommendation[];
+}
+
+export interface ProcessRecommendation {
+  id: string;
+  processId: string;
+  analysisId?: string;
+  category: 'QUICK_WIN' | 'STRATEGIC' | 'AUTOMATION' | 'INTEGRATION' | 'REDESIGN';
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  title: string;
+  description: string;
+  expectedBenefits: string[];
+  implementation: {
+    effort: 'LOW' | 'MEDIUM' | 'HIGH';
+    timeline: string;
+    steps: string[];
+  };
+  metrics: {
+    timeSaving?: number;
+    costSaving?: number;
+    riskReduction?: number;
+  };
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'IMPLEMENTED';
+  approvedById?: string;
+  approvedAt?: string;
+  implementedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  analysis?: {
+    id: string;
+    analysisType: string;
+    createdAt: string;
+  };
+  approvedBy?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
+
+export interface StartAnalysisData {
+  analysisType?: 'FULL' | 'PAIN_POINTS' | 'RECOMMENDATIONS' | 'TO_BE';
+}
+
 class ApiClient {
   private baseURL: string;
 
@@ -360,6 +431,84 @@ class ApiClient {
     return this.request<{ message: string }>(`/api/pain-points/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  // AI Analysis endpoints
+  async startAnalysis(
+    processId: string,
+    data: StartAnalysisData = {}
+  ): Promise<{ success: boolean; message: string; analysisId: string }> {
+    return this.request<{ success: boolean; message: string; analysisId: string }>(
+      `/api/processes/${processId}/analyze`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async getAnalysis(analysisId: string): Promise<{ success: boolean; analysis: AIAnalysis }> {
+    return this.request<{ success: boolean; analysis: AIAnalysis }>(
+      `/api/analyses/${analysisId}`,
+      {
+        method: 'GET',
+      }
+    );
+  }
+
+  async getProcessAnalyses(processId: string): Promise<{ success: boolean; analyses: AIAnalysis[] }> {
+    return this.request<{ success: boolean; analyses: AIAnalysis[] }>(
+      `/api/processes/${processId}/analyses`,
+      {
+        method: 'GET',
+      }
+    );
+  }
+
+  async getProcessRecommendations(
+    processId: string,
+    status?: string
+  ): Promise<{ success: boolean; recommendations: ProcessRecommendation[] }> {
+    const queryParams = status ? `?status=${status}` : '';
+    return this.request<{ success: boolean; recommendations: ProcessRecommendation[] }>(
+      `/api/processes/${processId}/recommendations${queryParams}`,
+      {
+        method: 'GET',
+      }
+    );
+  }
+
+  async approveRecommendation(
+    recommendationId: string
+  ): Promise<{ success: boolean; recommendation: ProcessRecommendation }> {
+    return this.request<{ success: boolean; recommendation: ProcessRecommendation }>(
+      `/api/recommendations/${recommendationId}/approve`,
+      {
+        method: 'POST',
+      }
+    );
+  }
+
+  async rejectRecommendation(
+    recommendationId: string
+  ): Promise<{ success: boolean; recommendation: ProcessRecommendation }> {
+    return this.request<{ success: boolean; recommendation: ProcessRecommendation }>(
+      `/api/recommendations/${recommendationId}/reject`,
+      {
+        method: 'POST',
+      }
+    );
+  }
+
+  async implementRecommendation(
+    recommendationId: string
+  ): Promise<{ success: boolean; recommendation: ProcessRecommendation }> {
+    return this.request<{ success: boolean; recommendation: ProcessRecommendation }>(
+      `/api/recommendations/${recommendationId}/implement`,
+      {
+        method: 'POST',
+      }
+    );
   }
 }
 

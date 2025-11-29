@@ -10,7 +10,7 @@ import ReactFlow, {
   MiniMap,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings } from 'lucide-react';
+import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings, Sparkles, Lightbulb } from 'lucide-react';
 
 // Types for ReactFlow
 type Node = any;
@@ -669,6 +669,31 @@ export const ProcessEditor = () => {
             </Button>
           </div>
           <div className="h-8 w-px bg-gray-300"></div>
+          {id && (
+            <>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => navigate(`/processes/${id}/analyze`)}
+                  variant="outline"
+                  className="text-sm flex items-center gap-2 bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100"
+                  title="AI Analysis"
+                >
+                  <Sparkles size={16} className="text-purple-600" />
+                  AI Analysis
+                </Button>
+                <Button
+                  onClick={() => navigate(`/processes/${id}/recommendations`)}
+                  variant="outline"
+                  className="text-sm flex items-center gap-2"
+                  title="View Recommendations"
+                >
+                  <Lightbulb size={16} className="text-blue-600" />
+                  Recommendations
+                </Button>
+              </div>
+              <div className="h-8 w-px bg-gray-300"></div>
+            </>
+          )}
           <div>
             <Input
               type="text"
