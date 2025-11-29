@@ -18,10 +18,42 @@ export const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
   const [description, setDescription] = useState(node.data.description || '');
   const [duration, setDuration] = useState(node.data.duration || '');
 
+  // UserTask specific
+  const [assignee, setAssignee] = useState(node.data.assignee || '');
+  const [dueDate, setDueDate] = useState(node.data.dueDate || '');
+  const [priority, setPriority] = useState(node.data.priority || 'medium');
+
+  // SystemTask specific
+  const [serviceName, setServiceName] = useState(node.data.serviceName || '');
+  const [endpoint, setEndpoint] = useState(node.data.endpoint || '');
+  const [retryPolicy, setRetryPolicy] = useState(node.data.retryPolicy || '3');
+
+  // Timer specific
+  const [timerType, setTimerType] = useState(node.data.timerType || 'delay');
+  const [schedule, setSchedule] = useState(node.data.schedule || '');
+
+  // Subprocess specific
+  const [subprocessRef, setSubprocessRef] = useState(node.data.subprocessRef || '');
+  const [loopType, setLoopType] = useState(node.data.loopType || 'none');
+
+  // ParallelGateway specific
+  const [gatewayType, setGatewayType] = useState(node.data.gatewayType || 'fork');
+
   useEffect(() => {
     setLabel(node.data.label || '');
     setDescription(node.data.description || '');
     setDuration(node.data.duration || '');
+    setAssignee(node.data.assignee || '');
+    setDueDate(node.data.dueDate || '');
+    setPriority(node.data.priority || 'medium');
+    setServiceName(node.data.serviceName || '');
+    setEndpoint(node.data.endpoint || '');
+    setRetryPolicy(node.data.retryPolicy || '3');
+    setTimerType(node.data.timerType || 'delay');
+    setSchedule(node.data.schedule || '');
+    setSubprocessRef(node.data.subprocessRef || '');
+    setLoopType(node.data.loopType || 'none');
+    setGatewayType(node.data.gatewayType || 'fork');
   }, [node]);
 
   const handleSave = () => {
@@ -30,6 +62,17 @@ export const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
       label,
       description,
       duration: duration ? parseInt(duration) : undefined,
+      assignee,
+      dueDate,
+      priority,
+      serviceName,
+      endpoint,
+      retryPolicy: retryPolicy ? parseInt(retryPolicy) : undefined,
+      timerType,
+      schedule,
+      subprocessRef,
+      loopType,
+      gatewayType,
     });
     onClose();
   };
@@ -91,7 +134,7 @@ export const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
           />
         </div>
 
-        {node.type === 'task' && (
+        {(node.type === 'task' || node.type === 'userTask' || node.type === 'systemTask') && (
           <div>
             <label htmlFor="node-duration" className="block text-sm font-medium text-gray-700 mb-1">
               Duration (minutes)
@@ -106,6 +149,183 @@ export const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
               className="w-full"
               min="0"
             />
+          </div>
+        )}
+
+        {/* UserTask specific fields */}
+        {node.type === 'userTask' && (
+          <>
+            <div>
+              <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 mb-1">
+                Assignee
+              </label>
+              <Input
+                id="assignee"
+                value={assignee}
+                onChange={(e) => setAssignee(e.target.value)}
+                placeholder="User or role"
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-1">
+                Due Date
+              </label>
+              <Input
+                id="dueDate"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+                Priority
+              </label>
+              <select
+                id="priority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+          </>
+        )}
+
+        {/* SystemTask specific fields */}
+        {node.type === 'systemTask' && (
+          <>
+            <div>
+              <label htmlFor="serviceName" className="block text-sm font-medium text-gray-700 mb-1">
+                Service Name
+              </label>
+              <Input
+                id="serviceName"
+                value={serviceName}
+                onChange={(e) => setServiceName(e.target.value)}
+                placeholder="API service name"
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="endpoint" className="block text-sm font-medium text-gray-700 mb-1">
+                API Endpoint
+              </label>
+              <Input
+                id="endpoint"
+                value={endpoint}
+                onChange={(e) => setEndpoint(e.target.value)}
+                placeholder="/api/v1/..."
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="retryPolicy" className="block text-sm font-medium text-gray-700 mb-1">
+                Retry Attempts
+              </label>
+              <Input
+                id="retryPolicy"
+                type="number"
+                value={retryPolicy}
+                onChange={(e) => setRetryPolicy(e.target.value)}
+                placeholder="3"
+                className="w-full"
+                min="0"
+                max="10"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Timer specific fields */}
+        {node.type === 'timer' && (
+          <>
+            <div>
+              <label htmlFor="timerType" className="block text-sm font-medium text-gray-700 mb-1">
+                Timer Type
+              </label>
+              <select
+                id="timerType"
+                value={timerType}
+                onChange={(e) => setTimerType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="delay">Delay (Duration)</option>
+                <option value="date">Specific Date/Time</option>
+                <option value="cycle">Recurring (Cron)</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="schedule" className="block text-sm font-medium text-gray-700 mb-1">
+                {timerType === 'delay' ? 'Delay (minutes)' : timerType === 'date' ? 'Date/Time' : 'Cron Expression'}
+              </label>
+              <Input
+                id="schedule"
+                type={timerType === 'date' ? 'datetime-local' : 'text'}
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+                placeholder={timerType === 'delay' ? '60' : timerType === 'date' ? '' : '0 9 * * MON'}
+                className="w-full"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Subprocess specific fields */}
+        {node.type === 'subprocess' && (
+          <>
+            <div>
+              <label htmlFor="subprocessRef" className="block text-sm font-medium text-gray-700 mb-1">
+                Subprocess Reference
+              </label>
+              <Input
+                id="subprocessRef"
+                value={subprocessRef}
+                onChange={(e) => setSubprocessRef(e.target.value)}
+                placeholder="Subprocess ID or name"
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label htmlFor="loopType" className="block text-sm font-medium text-gray-700 mb-1">
+                Loop Type
+              </label>
+              <select
+                id="loopType"
+                value={loopType}
+                onChange={(e) => setLoopType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="none">No Loop</option>
+                <option value="standard">Standard Loop</option>
+                <option value="multi-instance">Multi-Instance (Parallel)</option>
+                <option value="sequential">Sequential Multi-Instance</option>
+              </select>
+            </div>
+          </>
+        )}
+
+        {/* ParallelGateway specific fields */}
+        {node.type === 'parallelGateway' && (
+          <div>
+            <label htmlFor="gatewayType" className="block text-sm font-medium text-gray-700 mb-1">
+              Gateway Type
+            </label>
+            <select
+              id="gatewayType"
+              value={gatewayType}
+              onChange={(e) => setGatewayType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="fork">Fork (Split into parallel paths)</option>
+              <option value="join">Join (Merge parallel paths)</option>
+            </select>
           </div>
         )}
 

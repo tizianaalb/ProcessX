@@ -3,11 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Activity, ArrowRight, Mail, Lock, Sparkles, TrendingUp, Zap } from 'lucide-react';
+import { Activity, ArrowRight, Mail, Lock, Sparkles, TrendingUp, Zap, Eye, EyeOff } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -20,6 +22,19 @@ export const Login: React.FC = () => {
 
     try {
       await login({ email, password });
+
+      // Store remember me preference
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+        // Set token expiration for 30 days from now
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 30);
+        localStorage.setItem('tokenExpiration', expirationDate.toISOString());
+      } else {
+        localStorage.removeItem('rememberMe');
+        localStorage.removeItem('tokenExpiration');
+      }
+
       navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -171,16 +186,40 @@ export const Login: React.FC = () => {
                     <Input
                       id="password"
                       name="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••"
-                      className="pl-12 py-6 text-base border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      className="pl-12 pr-12 py-6 text-base border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
                   </div>
                 </div>
+              </div>
+
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 bg-white border-2 border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
+                />
+                <label
+                  htmlFor="rememberMe"
+                  className="text-sm font-semibold text-slate-700 cursor-pointer select-none"
+                >
+                  Remember me for 30 days
+                </label>
               </div>
 
               <div>

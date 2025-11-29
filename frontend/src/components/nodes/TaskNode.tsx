@@ -8,25 +8,25 @@ export const TaskNode = React.memo(({ data, selected }: any) => {
     <div className="relative">
       <NodeResizer
         isVisible={selected}
-        minWidth={80}
-        minHeight={40}
+        minWidth={40}
+        minHeight={20}
         handleStyle={{
-          width: '6px',
-          height: '6px',
+          width: '4px',
+          height: '4px',
           borderRadius: '1px',
         }}
       />
       <div className={`
-        bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-2 shadow-md min-w-[80px]
+        bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-1 shadow-md min-w-[40px]
         border transition-all duration-200
         ${selected ? 'border-blue-700 shadow-lg ring-1 ring-blue-300' : 'border-blue-600'}
       `}>
-        <div className="font-bold text-[10px] flex items-center justify-center">
+        <div className="font-bold text-[8px] flex items-center justify-center">
           <span className="text-center truncate">{data.label || 'Task'}</span>
         </div>
         {data.duration && (
-          <div className="text-[8px] flex items-center justify-center gap-0.5 opacity-90 mt-0.5">
-            <Clock className="w-2 h-2" />
+          <div className="text-[6px] flex items-center justify-center gap-0.5 opacity-90">
+            <Clock className="w-1.5 h-1.5" />
             <span>{data.duration}m</span>
           </div>
         )}

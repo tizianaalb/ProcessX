@@ -32,8 +32,8 @@ if [ -f logs/frontend.pid ]; then
     rm -f logs/frontend.pid
 fi
 
-# Kill any remaining vite processes
-pkill -f "vite" 2>/dev/null && echo -e "${GREEN}✓ Cleaned up remaining vite processes${NC}" || true
+# Kill any remaining vite processes specific to ProcessX
+pkill -f "ProcessX/frontend.*vite" 2>/dev/null && echo -e "${GREEN}✓ Cleaned up remaining ProcessX vite processes${NC}" || true
 
 # Stop backend
 echo -e "${YELLOW}[2/3] Stopping backend server...${NC}"
@@ -48,8 +48,8 @@ if [ -f logs/backend.pid ]; then
     rm -f logs/backend.pid
 fi
 
-# Kill any remaining tsx processes
-pkill -f "tsx watch" 2>/dev/null && echo -e "${GREEN}✓ Cleaned up remaining tsx processes${NC}" || true
+# Kill any remaining tsx processes specific to ProcessX backend
+pkill -f "ProcessX/backend.*tsx watch" 2>/dev/null && echo -e "${GREEN}✓ Cleaned up remaining ProcessX tsx processes${NC}" || true
 
 # Stop Docker services
 echo -e "${YELLOW}[3/3] Stopping Docker services...${NC}"

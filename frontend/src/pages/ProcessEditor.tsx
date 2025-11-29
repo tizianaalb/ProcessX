@@ -10,7 +10,7 @@ import ReactFlow, {
   MiniMap,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { AlertTriangle, Plus, ChevronRight, ChevronLeft } from 'lucide-react';
+import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings } from 'lucide-react';
 
 // Types for ReactFlow
 type Node = any;
@@ -25,6 +25,19 @@ import { StartNode } from '../components/nodes/StartNode';
 import { TaskNode } from '../components/nodes/TaskNode';
 import { DecisionNode } from '../components/nodes/DecisionNode';
 import { EndNode } from '../components/nodes/EndNode';
+import { ParallelGatewayNode } from '../components/nodes/ParallelGatewayNode';
+import { SubprocessNode } from '../components/nodes/SubprocessNode';
+import { UserTaskNode } from '../components/nodes/UserTaskNode';
+import { SystemTaskNode } from '../components/nodes/SystemTaskNode';
+import { TimerNode } from '../components/nodes/TimerNode';
+import { AnnotationNode } from '../components/nodes/AnnotationNode';
+import { InclusiveGatewayNode } from '../components/nodes/InclusiveGatewayNode';
+import { EventGatewayNode } from '../components/nodes/EventGatewayNode';
+import { MessageEventNode } from '../components/nodes/MessageEventNode';
+import { ErrorEventNode } from '../components/nodes/ErrorEventNode';
+import { SignalEventNode } from '../components/nodes/SignalEventNode';
+import { DataObjectNode } from '../components/nodes/DataObjectNode';
+import { GroupNode } from '../components/nodes/GroupNode';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { PainPointModal } from '../components/PainPointModal';
@@ -32,12 +45,26 @@ import { PainPointList } from '../components/PainPointList';
 import { ContextMenu, getNodeContextMenuItems, getEdgeContextMenuItems } from '../components/ContextMenu';
 import { NodePropertiesPanel } from '../components/NodePropertiesPanel';
 import { NodePalette } from '../components/NodePalette';
+import { AIAnalysisPanel } from '../components/AIAnalysisPanel';
 
 const nodeTypes = {
   start: StartNode,
   task: TaskNode,
   decision: DecisionNode,
   end: EndNode,
+  parallelGateway: ParallelGatewayNode,
+  subprocess: SubprocessNode,
+  userTask: UserTaskNode,
+  systemTask: SystemTaskNode,
+  timer: TimerNode,
+  annotation: AnnotationNode,
+  inclusiveGateway: InclusiveGatewayNode,
+  eventGateway: EventGatewayNode,
+  messageEvent: MessageEventNode,
+  errorEvent: ErrorEventNode,
+  signalEvent: SignalEventNode,
+  dataObject: DataObjectNode,
+  group: GroupNode,
 };
 
 export const ProcessEditor = () => {
@@ -231,7 +258,28 @@ export const ProcessEditor = () => {
     []
   );
 
-  const addNode = (type: 'start' | 'task' | 'decision' | 'end') => {
+  const addNode = (type: 'start' | 'task' | 'decision' | 'end' | 'parallelGateway' | 'subprocess' | 'userTask' | 'systemTask' | 'timer' | 'annotation' | 'inclusiveGateway' | 'eventGateway' | 'messageEvent' | 'errorEvent' | 'signalEvent' | 'dataObject' | 'group') => {
+    // Generate friendly labels for new node types
+    const labelMap: Record<string, string> = {
+      start: 'Start',
+      end: 'End',
+      task: 'Task',
+      decision: 'Decision',
+      parallelGateway: 'Parallel',
+      subprocess: 'Subprocess',
+      userTask: 'User Task',
+      systemTask: 'System Task',
+      timer: 'Timer',
+      annotation: 'Note',
+      inclusiveGateway: 'Inclusive OR',
+      eventGateway: 'Event Gateway',
+      messageEvent: 'Message',
+      errorEvent: 'Error',
+      signalEvent: 'Signal',
+      dataObject: 'Data',
+      group: 'Group',
+    };
+
     const newNode: Node = {
       id: `node-${Date.now()}`,
       type,
@@ -240,7 +288,7 @@ export const ProcessEditor = () => {
         y: Math.random() * 300 + 100,
       },
       data: {
-        label: type.charAt(0).toUpperCase() + type.slice(1),
+        label: labelMap[type] || type,
       },
     };
     setNodes((nds) => [...nds, newNode]);
@@ -266,13 +314,34 @@ export const ProcessEditor = () => {
     addNodeAtPosition(type as any, position);
   }, []);
 
-  const addNodeAtPosition = (type: 'start' | 'task' | 'decision' | 'end', position: { x: number; y: number }) => {
+  const addNodeAtPosition = (type: 'start' | 'task' | 'decision' | 'end' | 'parallelGateway' | 'subprocess' | 'userTask' | 'systemTask' | 'timer' | 'annotation' | 'inclusiveGateway' | 'eventGateway' | 'messageEvent' | 'errorEvent' | 'signalEvent' | 'dataObject' | 'group', position: { x: number; y: number }) => {
+    // Generate friendly labels for new node types
+    const labelMap: Record<string, string> = {
+      start: 'Start',
+      end: 'End',
+      task: 'Task',
+      decision: 'Decision',
+      parallelGateway: 'Parallel',
+      subprocess: 'Subprocess',
+      userTask: 'User Task',
+      systemTask: 'System Task',
+      timer: 'Timer',
+      annotation: 'Note',
+      inclusiveGateway: 'Inclusive OR',
+      eventGateway: 'Event Gateway',
+      messageEvent: 'Message',
+      errorEvent: 'Error',
+      signalEvent: 'Signal',
+      dataObject: 'Data',
+      group: 'Group',
+    };
+
     const newNode: Node = {
       id: `node-${Date.now()}`,
       type,
       position,
       data: {
-        label: type.charAt(0).toUpperCase() + type.slice(1),
+        label: labelMap[type] || type,
       },
     };
     setNodes((nds) => [...nds, newNode]);
@@ -520,13 +589,34 @@ export const ProcessEditor = () => {
       {/* Header */}
       <div className="bg-white border-b p-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Button
-            onClick={() => navigate('/processes')}
-            variant="outline"
-            className="text-sm"
-          >
-            ← Back
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => navigate('/dashboard')}
+              variant="outline"
+              className="text-sm flex items-center gap-2"
+              title="Go to Dashboard"
+            >
+              <Home size={16} />
+              Dashboard
+            </Button>
+            <Button
+              onClick={() => navigate('/settings')}
+              variant="outline"
+              className="text-sm flex items-center gap-2"
+              title="Go to Settings"
+            >
+              <Settings size={16} />
+              Settings
+            </Button>
+            <Button
+              onClick={() => navigate('/processes')}
+              variant="outline"
+              className="text-sm"
+            >
+              ← Processes
+            </Button>
+          </div>
+          <div className="h-8 w-px bg-gray-300"></div>
           <div>
             <Input
               type="text"
@@ -646,6 +736,14 @@ export const ProcessEditor = () => {
 
           {/* Node Palette */}
           <NodePalette onAddNode={addNode} />
+
+          {/* AI Analysis Panel */}
+          {process && (
+            <AIAnalysisPanel
+              processId={process.id}
+              onAnalysisComplete={loadPainPoints}
+            />
+          )}
 
           {/* Node Properties Panel */}
           {showPropertiesPanel && selectedNodeForEdit && (

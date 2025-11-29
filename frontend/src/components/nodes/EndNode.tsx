@@ -7,12 +7,12 @@ export const EndNode = React.memo(({ data, selected }: any) => {
   return (
     <div className="relative">
       <div className={`
-        bg-gradient-to-br from-red-500 to-red-600 text-white rounded-full w-16 h-16
+        bg-gradient-to-br from-red-500 to-red-600 text-white rounded-full w-8 h-8
         flex flex-col items-center justify-center font-bold shadow-md border transition-all duration-200
         ${selected ? 'border-red-700 shadow-lg ring-1 ring-red-300 scale-110' : 'border-red-600'}
       `}>
-        <StopCircle className="w-4 h-4" fill="white" />
-        <span className="text-[8px] mt-0.5">END</span>
+        <StopCircle className="w-3 h-3" fill="white" />
+        <span className="text-[6px]">END</span>
       </div>
       {data.painPointCount > 0 && (
         <PainPointBadge

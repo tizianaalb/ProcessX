@@ -22,7 +22,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check for existing token on mount
     const storedToken = localStorage.getItem('auth_token');
+    const rememberMe = localStorage.getItem('rememberMe') === 'true';
+    const tokenExpiration = localStorage.getItem('tokenExpiration');
+
+    // Check if Remember Me was enabled and token hasn't expired
     if (storedToken) {
+      // If Remember Me is enabled, check expiration
+      if (rememberMe && tokenExpiration) {
+        const expirationDate = new Date(tokenExpiration);
+        const now = new Date();
+
+        // If token has expired, clear it
+        if (now > expirationDate) {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('rememberMe');
+          localStorage.removeItem('tokenExpiration');
+          setToken(null);
+          setLoading(false);
+          return;
+        }
+      }
+
       setToken(storedToken);
       // Verify token and get user data
       api
@@ -33,6 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .catch(() => {
           // Token invalid, clear it
           localStorage.removeItem('auth_token');
+          localStorage.removeItem('rememberMe');
+          localStorage.removeItem('tokenExpiration');
           setToken(null);
         })
         .finally(() => {
@@ -67,6 +89,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('rememberMe');
+    localStorage.removeItem('tokenExpiration');
     setToken(null);
     setUser(null);
   };

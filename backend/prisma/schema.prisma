@@ -20,6 +20,7 @@ model Organization {
   users           User[]
   processes       Process[]
   templates       ProcessTemplate[]
+  apiConfigurations APIConfiguration[]
 
   @@map("organizations")
 }
@@ -250,6 +251,27 @@ model Export {
   @@index([processId])
   @@index([userId])
   @@map("exports")
+}
+
+// API Configuration
+model APIConfiguration {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  provider        String    // ANTHROPIC, GOOGLE_GEMINI, OPENAI, AZURE_OPENAI
+  apiKey          String    @map("api_key")
+  modelId         String?   @map("model_id") // e.g., claude-3-5-sonnet-20241022, gemini-pro
+  isActive        Boolean   @default(true) @map("is_active")
+  isDefault       Boolean   @default(false) @map("is_default") // default provider for AI operations
+  config          Json?     // Additional configuration (endpoints, parameters, etc.)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([provider])
+  @@unique([organizationId, provider])
+  @@map("api_configurations")
 }
 
 // Audit Logs

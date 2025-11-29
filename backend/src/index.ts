@@ -6,6 +6,9 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
 import processRoutes from './routes/process.routes.js';
 import painPointRoutes from './routes/painpoint.routes.js';
+import recommendationRoutes from './routes/recommendation.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
+import exportRoutes from './routes/export.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -14,10 +17,15 @@ const app = express();
 const PORT = process.env.PORT || 3100;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5200',
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -39,6 +47,9 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/processes', processRoutes);
 app.use('/api', painPointRoutes);
+app.use('/api', recommendationRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api', exportRoutes);
 
 app.get('/api', (req, res) => {
   res.json({
@@ -49,6 +60,9 @@ app.get('/api', (req, res) => {
       auth: '/api/auth/*',
       processes: '/api/processes/*',
       painPoints: '/api/processes/:processId/pain-points',
+      analyze: '/api/processes/:processId/analyze',
+      recommendations: '/api/processes/:processId/recommendations',
+      targetProcess: '/api/processes/:processId/target',
     },
   });
 });

@@ -21,6 +21,7 @@ import {
   Activity,
   Users,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 
 interface ProcessSummary {
@@ -107,6 +108,16 @@ export const Dashboard: React.FC = () => {
                   <span className="text-xs text-slate-500">{user?.email}</span>
                 </div>
               </div>
+              {user?.role === 'admin' && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/settings')}
+                  className="flex items-center gap-2 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600 transition-all shadow-sm"
+                >
+                  <Settings size={18} />
+                  <span className="hidden sm:inline font-medium">Settings</span>
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={handleLogout}

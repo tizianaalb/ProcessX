@@ -7,13 +7,13 @@ export const DecisionNode = React.memo(({ data, selected }: any) => {
   return (
     <div className="relative">
       <div className={`
-        bg-gradient-to-br from-yellow-500 to-yellow-600 text-white transform rotate-45 w-20 h-20
+        bg-gradient-to-br from-yellow-500 to-yellow-600 text-white transform rotate-45 w-10 h-10
         flex items-center justify-center shadow-md border transition-all duration-200
         ${selected ? 'border-yellow-700 shadow-lg ring-1 ring-yellow-300 scale-110' : 'border-yellow-600'}
       `}>
-        <div className="transform -rotate-45 text-[8px] font-bold text-center px-1">
-          <HelpCircle className="w-3 h-3 mx-auto" />
-          <div className="line-clamp-1 mt-0.5">{data.label || 'Decision'}</div>
+        <div className="transform -rotate-45 text-[6px] font-bold text-center px-0.5">
+          <HelpCircle className="w-2 h-2 mx-auto" />
+          <div className="line-clamp-1">{data.label || 'Decision'}</div>
         </div>
       </div>
       {data.painPointCount > 0 && (
