@@ -18,7 +18,7 @@ export const startAnalysis = async (req: Request, res: Response) => {
     console.log('🔍 Starting AI analysis:', {
       processId,
       analysisType,
-      userId: user.id,
+      userId: user.userId,
       organizationId: user.organizationId,
     });
 
@@ -43,7 +43,7 @@ export const startAnalysis = async (req: Request, res: Response) => {
     // Start analysis
     const analysisId = await aiAnalysisService.analyzeProcess(
       processId,
-      user.id,
+      user.userId,
       analysisType
     );
 
@@ -188,7 +188,7 @@ export const approveRecommendation = async (req: Request, res: Response) => {
       where: { id: recommendationId },
       data: {
         status: 'APPROVED',
-        approvedById: user.id,
+        approvedById: user.userId,
         approvedAt: new Date(),
       },
     });

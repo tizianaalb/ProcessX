@@ -3,6 +3,55 @@ import { AIService } from './ai.service';
 
 const prisma = new PrismaClient();
 
+/**
+ * Helper function to extract and parse JSON from AI responses
+ * Handles markdown code blocks and extra text after JSON
+ */
+function parseAIResponse(response: string): any {
+  try {
+    // Try direct parse first
+    return JSON.parse(response);
+  } catch {
+    // Try to extract JSON from markdown code blocks
+    const jsonMatch = response.match(/```(?:json)?\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[1]);
+      } catch {
+        // Fall through to next method
+      }
+    }
+
+    // Try to find first { and last }
+    const firstBrace = response.indexOf('{');
+    const lastBrace = response.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        const jsonStr = response.substring(firstBrace, lastBrace + 1);
+        return JSON.parse(jsonStr);
+      } catch {
+        // Fall through to next method
+      }
+    }
+
+    // Try to find first [ and last ]
+    const firstBracket = response.indexOf('[');
+    const lastBracket = response.lastIndexOf(']');
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      try {
+        const jsonStr = response.substring(firstBracket, lastBracket + 1);
+        return JSON.parse(jsonStr);
+      } catch {
+        // If all else fails, return the raw response
+        return { summary: response };
+      }
+    }
+
+    // If no JSON found, return as summary
+    return { summary: response };
+  }
+}
+
 export interface ProcessContext {
   process: {
     id: string;
@@ -212,7 +261,7 @@ export class AIAnalysisService {
             estimatedTime: painPoint.estimatedTime,
             frequency: painPoint.frequency,
             isAiDetected: true,
-            processStepId: painPoint.processStepId || null,
+            ...(painPoint.processStepId && { processStepId: painPoint.processStepId }),
           },
         });
       }
@@ -358,11 +407,7 @@ export class AIAnalysisService {
     const response = await AIService.callAI(process!.organizationId, prompt);
 
     // Parse and return understanding
-    try {
-      return JSON.parse(response);
-    } catch {
-      return { summary: response };
-    }
+    return parseAIResponse(response);
   }
 
   /**
@@ -509,23 +554,8 @@ Example: [{"category": "BOTTLENECK", "severity": "HIGH", "title": "...", ...}]`;
    * Parse pain points from AI response
    */
   private parsePainPoints(response: string): DetectedPainPoint[] {
-    try {
-      // Try to parse as JSON
-      const parsed = JSON.parse(response);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      // If not JSON, try to extract JSON from markdown code blocks
-      const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch) {
-        try {
-          const parsed = JSON.parse(jsonMatch[1]);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    }
+    const parsed = parseAIResponse(response);
+    return Array.isArray(parsed) ? parsed : [];
   }
 
   /**

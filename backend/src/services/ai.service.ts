@@ -91,12 +91,12 @@ export class AIService {
   }
 
   /**
-   * Call AI provider with a prompt and get JSON response
+   * Call AI provider with a prompt and get raw text response
    */
   public static async callAI(
     organizationId: string,
     prompt: string
-  ): Promise<any> {
+  ): Promise<string> {
     const config = await this.getAIConfig(organizationId);
 
     switch (config.provider) {
@@ -117,7 +117,7 @@ export class AIService {
   private static async callAnthropic(
     config: AIProviderConfig,
     prompt: string
-  ): Promise<any> {
+  ): Promise<string> {
     const anthropic = new Anthropic({
       apiKey: config.apiKey,
     });
@@ -135,13 +135,10 @@ export class AIService {
 
     const content = message.content[0];
     if (content.type === 'text') {
-      const jsonMatch = content.text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
+      return content.text;
     }
 
-    throw new Error('Failed to parse Anthropic response');
+    throw new Error('Failed to get text from Anthropic response');
   }
 
   /**
@@ -150,7 +147,7 @@ export class AIService {
   private static async callGemini(
     config: AIProviderConfig,
     prompt: string
-  ): Promise<any> {
+  ): Promise<string> {
     const genAI = new GoogleGenerativeAI(config.apiKey);
     const model = genAI.getGenerativeModel({
       model: config.modelId || 'gemini-1.5-pro',
@@ -158,14 +155,7 @@ export class AIService {
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-
-    throw new Error('Failed to parse Gemini response');
+    return response.text();
   }
 
   /**
@@ -174,7 +164,7 @@ export class AIService {
   private static async callOpenAI(
     config: AIProviderConfig,
     prompt: string
-  ): Promise<any> {
+  ): Promise<string> {
     const openai = new OpenAI({
       apiKey: config.apiKey,
     });
@@ -192,10 +182,10 @@ export class AIService {
 
     const content = completion.choices[0]?.message?.content;
     if (content) {
-      return JSON.parse(content);
+      return content;
     }
 
-    throw new Error('Failed to parse OpenAI response');
+    throw new Error('Failed to get response from OpenAI');
   }
 
   /**
