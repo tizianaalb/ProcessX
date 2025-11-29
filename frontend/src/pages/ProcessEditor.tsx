@@ -7,6 +7,7 @@ import ReactFlow, {
   applyEdgeChanges,
   addEdge,
   BackgroundVariant,
+  MiniMap,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { AlertTriangle, Plus, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -28,6 +29,9 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { PainPointModal } from '../components/PainPointModal';
 import { PainPointList } from '../components/PainPointList';
+import { ContextMenu, getNodeContextMenuItems, getEdgeContextMenuItems } from '../components/ContextMenu';
+import { NodePropertiesPanel } from '../components/NodePropertiesPanel';
+import { NodePalette } from '../components/NodePalette';
 
 const nodeTypes = {
   start: StartNode,
@@ -56,6 +60,17 @@ export const ProcessEditor = () => {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [editingPainPoint, setEditingPainPoint] = useState<PainPoint | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Context menu and properties panel state
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    type: 'node' | 'edge' | null;
+    target: any;
+  }>({ visible: false, x: 0, y: 0, type: null, target: null });
+  const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
+  const [selectedNodeForEdit, setSelectedNodeForEdit] = useState<Node | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -229,6 +244,116 @@ export const ProcessEditor = () => {
       },
     };
     setNodes((nds) => [...nds, newNode]);
+  };
+
+  // Drag and drop handlers for node palette
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    const type = event.dataTransfer.getData('application/reactflow');
+    if (!type) return;
+
+    const reactFlowBounds = event.currentTarget.getBoundingClientRect();
+    const position = {
+      x: event.clientX - reactFlowBounds.left,
+      y: event.clientY - reactFlowBounds.top,
+    };
+
+    addNodeAtPosition(type as any, position);
+  }, []);
+
+  const addNodeAtPosition = (type: 'start' | 'task' | 'decision' | 'end', position: { x: number; y: number }) => {
+    const newNode: Node = {
+      id: `node-${Date.now()}`,
+      type,
+      position,
+      data: {
+        label: type.charAt(0).toUpperCase() + type.slice(1),
+      },
+    };
+    setNodes((nds) => [...nds, newNode]);
+  };
+
+  // Context menu handlers
+  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      type: 'node',
+      target: node,
+    });
+  }, []);
+
+  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      type: 'edge',
+      target: edge,
+    });
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null });
+  }, []);
+
+  // Node edit/delete/duplicate handlers
+  const handleEditNode = (node: Node) => {
+    setSelectedNodeForEdit(node);
+    setShowPropertiesPanel(true);
+    setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null });
+  };
+
+  const handleDeleteNode = (nodeId: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null });
+  };
+
+  const handleDuplicateNode = (node: Node) => {
+    const newNode = {
+      ...node,
+      id: `node-${Date.now()}`,
+      position: {
+        x: node.position.x + 50,
+        y: node.position.y + 50,
+      },
+    };
+    setNodes((nds) => [...nds, newNode]);
+    setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null });
+  };
+
+  const handleSaveNodeProperties = (nodeId: string, data: any) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId ? { ...node, data } : node
+      )
+    );
+  };
+
+  const handleDeleteEdge = (edgeId: string) => {
+    setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+    setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null });
+  };
+
+  const handleEditEdgeLabel = (edge: Edge) => {
+    const newLabel = prompt('Enter edge label:', edge.label || '');
+    if (newLabel !== null) {
+      setEdges((eds) =>
+        eds.map((e) =>
+          e.id === edge.id ? { ...e, label: newLabel } : e
+        )
+      );
+    }
+    setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null });
   };
 
   const handleCreateProcess = async () => {
@@ -472,7 +597,7 @@ export const ProcessEditor = () => {
 
       {/* ReactFlow Canvas with Pain Point Sidebar */}
       <div className="flex-1 flex relative">
-        <div className="flex-1">
+        <div className="flex-1 relative">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -480,13 +605,91 @@ export const ProcessEditor = () => {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={handleNodeClick}
+            onNodeContextMenu={onNodeContextMenu}
+            onEdgeContextMenu={onEdgeContextMenu}
+            onPaneClick={onPaneClick}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
             nodeTypes={nodeTypes}
             fitView
             attributionPosition="bottom-left"
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            }}
           >
             <Controls />
-            <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={16}
+              size={1.5}
+              color="#ffffff40"
+            />
+            <MiniMap
+              nodeColor={(node) => {
+                switch (node.type) {
+                  case 'start':
+                    return '#22c55e';
+                  case 'task':
+                    return '#3b82f6';
+                  case 'decision':
+                    return '#eab308';
+                  case 'end':
+                    return '#ef4444';
+                  default:
+                    return '#6366f1';
+                }
+              }}
+              maskColor="rgba(0, 0, 0, 0.2)"
+              className="bg-white/90 backdrop-blur-sm rounded-lg border border-white/20"
+            />
           </ReactFlow>
+
+          {/* Node Palette */}
+          <NodePalette onAddNode={addNode} />
+
+          {/* Node Properties Panel */}
+          {showPropertiesPanel && selectedNodeForEdit && (
+            <NodePropertiesPanel
+              node={selectedNodeForEdit}
+              onClose={() => {
+                setShowPropertiesPanel(false);
+                setSelectedNodeForEdit(null);
+              }}
+              onSave={handleSaveNodeProperties}
+            />
+          )}
+
+          {/* Context Menu */}
+          {contextMenu.visible && contextMenu.type === 'node' && (
+            <ContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              items={getNodeContextMenuItems(
+                () => handleEditNode(contextMenu.target),
+                () => handleDuplicateNode(contextMenu.target),
+                () => handleDeleteNode(contextMenu.target.id),
+                () => {
+                  setSelectedNode(contextMenu.target);
+                  setShowPainPointModal(true);
+                  setEditingPainPoint(null);
+                  setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null });
+                }
+              )}
+              onClose={() => setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null })}
+            />
+          )}
+
+          {contextMenu.visible && contextMenu.type === 'edge' && (
+            <ContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              items={getEdgeContextMenuItems(
+                () => handleEditEdgeLabel(contextMenu.target),
+                () => handleDeleteEdge(contextMenu.target.id)
+              )}
+              onClose={() => setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null })}
+            />
+          )}
         </div>
 
         {/* Pain Point Sidebar */}
