@@ -8,7 +8,6 @@ import ReactFlow, {
   addEdge,
   BackgroundVariant,
   MiniMap,
-  useReactFlow,
   ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -72,7 +71,7 @@ const nodeTypes = {
 const ProcessEditorInner = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const reactFlowInstance = useReactFlow();
+  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const [process, setProcess] = useState<Process | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -320,7 +319,7 @@ const ProcessEditorInner = () => {
   const onDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     const type = event.dataTransfer.getData('application/reactflow');
-    if (!type) return;
+    if (!type || !reactFlowInstance) return;
 
     // Get the exact position where the mouse dropped the component
     // project() converts screen coordinates to flow coordinates (accounts for zoom/pan)
@@ -781,6 +780,7 @@ const ProcessEditorInner = () => {
             onPaneClick={onPaneClick}
             onDrop={onDrop}
             onDragOver={onDragOver}
+            onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
             fitView
             attributionPosition="bottom-left"
