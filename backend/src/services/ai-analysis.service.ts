@@ -185,10 +185,23 @@ export class AIAnalysisService {
   ): Promise<void> {
     console.log(`📈 [${analysisId}] Updating status to IN_PROGRESS...`);
 
-    // Update status to IN_PROGRESS
+    // Get AI config to determine provider
+    const process = await prisma.process.findUnique({
+      where: { id: processId },
+      select: { organizationId: true, createdById: true },
+    });
+
+    const aiConfig = await AIService.getAIConfig(process!.organizationId);
+
+    // Update status to IN_PROGRESS with provider info
     await prisma.aIAnalysis.update({
       where: { id: analysisId },
-      data: { status: 'IN_PROGRESS', progressStep: 'gathering' },
+      data: {
+        status: 'IN_PROGRESS',
+        progressStep: 'gathering',
+        aiProvider: aiConfig.provider,
+        modelId: aiConfig.modelId,
+      },
     });
 
     console.log(`📈 [${analysisId}] Gathering process context...`);

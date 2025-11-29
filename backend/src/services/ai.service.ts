@@ -47,7 +47,7 @@ export class AIService {
   /**
    * Get the default AI configuration for an organization
    */
-  private static async getAIConfig(organizationId: string): Promise<AIProviderConfig> {
+  public static async getAIConfig(organizationId: string): Promise<AIProviderConfig> {
     // First, try to find a configuration marked as default
     let config = await prisma.aPIConfiguration.findFirst({
       where: {
