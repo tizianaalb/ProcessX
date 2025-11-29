@@ -7,12 +7,12 @@ export const StartNode = React.memo(({ data, selected }: any) => {
   return (
     <div className="relative">
       <div className={`
-        bg-gradient-to-br from-green-500 to-green-600 text-white rounded-full w-24 h-24
-        flex flex-col items-center justify-center font-bold shadow-lg border-2 transition-all duration-200
-        ${selected ? 'border-green-700 shadow-xl ring-2 ring-green-300 scale-105' : 'border-green-600'}
+        bg-gradient-to-br from-green-500 to-green-600 text-white rounded-full w-16 h-16
+        flex flex-col items-center justify-center font-bold shadow-md border transition-all duration-200
+        ${selected ? 'border-green-700 shadow-lg ring-1 ring-green-300 scale-110' : 'border-green-600'}
       `}>
-        <Play className="w-6 h-6 mb-1" fill="white" />
-        <span className="text-sm">START</span>
+        <Play className="w-4 h-4" fill="white" />
+        <span className="text-[8px] mt-0.5">START</span>
       </div>
       {data.painPointCount > 0 && (
         <PainPointBadge
@@ -23,7 +23,7 @@ export const StartNode = React.memo(({ data, selected }: any) => {
       <Handle
         type="source"
         position={Position.Right}
-        className="w-3 h-3 !bg-green-700 border-2 border-white hover:!bg-green-800 transition-colors"
+        className="w-2 h-2 !bg-green-700 border border-white hover:!bg-green-800 transition-colors"
       />
     </div>
   );

@@ -695,25 +695,33 @@ export const ProcessEditor = () => {
         {/* Pain Point Sidebar */}
         {process && (
           <div
-            className={`bg-white border-l shadow-lg transition-all duration-300 ${
+            className={`bg-gradient-to-b from-white to-gray-50 border-l border-gray-200 shadow-2xl transition-all duration-300 ${
               sidebarOpen ? 'w-96' : 'w-0'
             } overflow-hidden flex flex-col`}
           >
-            <div className="p-4 border-b flex items-center justify-between bg-gray-50">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="text-orange-500" size={20} />
-                <h3 className="font-semibold text-gray-900">
-                  Pain Points ({painPoints.length})
-                </h3>
+            <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-orange-50 via-red-50 to-pink-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
+                  <AlertTriangle className="text-white" size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    Pain Points
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    {painPoints.length} {painPoints.length === 1 ? 'issue' : 'issues'} identified
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded-lg transition-colors"
+                title="Close sidebar"
               >
                 <ChevronRight size={20} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto bg-gray-50/50">
               <PainPointList
                 painPoints={painPoints}
                 onEdit={handleEditPainPoint}
@@ -728,9 +736,18 @@ export const ProcessEditor = () => {
         {process && !sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="absolute right-0 top-1/2 -translate-y-1/2 bg-white border border-r-0 rounded-l-lg p-2 shadow-lg hover:bg-gray-50"
+            className="absolute right-0 top-1/2 -translate-y-1/2 bg-gradient-to-br from-orange-500 to-red-500 border-2 border-white rounded-l-xl p-3 shadow-2xl hover:from-orange-600 hover:to-red-600 transition-all hover:scale-110 group"
+            title="Open Pain Points"
           >
-            <ChevronLeft size={20} />
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="text-white" size={20} />
+              <ChevronLeft className="text-white group-hover:animate-pulse" size={20} />
+            </div>
+            {painPoints.length > 0 && (
+              <div className="absolute -top-2 -left-2 bg-red-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white shadow-lg">
+                {painPoints.length}
+              </div>
+            )}
           </button>
         )}
       </div>
@@ -749,20 +766,6 @@ export const ProcessEditor = () => {
         existingPainPoint={editingPainPoint || undefined}
       />
 
-      {/* Instructions */}
-      {nodes.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-white bg-opacity-90 rounded-lg shadow-lg p-8 max-w-md text-center">
-            <div className="text-4xl mb-4">🎨</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Start Building Your Process
-            </h3>
-            <p className="text-gray-600 text-sm">
-              Click the buttons above to add nodes to your process map. Connect nodes by dragging from one handle to another.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -8,31 +8,26 @@ export const TaskNode = React.memo(({ data, selected }: any) => {
     <div className="relative">
       <NodeResizer
         isVisible={selected}
-        minWidth={160}
-        minHeight={80}
+        minWidth={80}
+        minHeight={40}
         handleStyle={{
-          width: '8px',
-          height: '8px',
-          borderRadius: '2px',
+          width: '6px',
+          height: '6px',
+          borderRadius: '1px',
         }}
       />
       <div className={`
-        bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-4 shadow-lg min-w-[160px]
-        border-2 transition-all duration-200
-        ${selected ? 'border-blue-700 shadow-xl ring-2 ring-blue-300' : 'border-blue-600'}
+        bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-2 shadow-md min-w-[80px]
+        border transition-all duration-200
+        ${selected ? 'border-blue-700 shadow-lg ring-1 ring-blue-300' : 'border-blue-600'}
       `}>
-        <div className="font-bold text-sm mb-1 flex items-center justify-center gap-2">
-          <span className="text-center">{data.label || 'Task'}</span>
+        <div className="font-bold text-[10px] flex items-center justify-center">
+          <span className="text-center truncate">{data.label || 'Task'}</span>
         </div>
         {data.duration && (
-          <div className="text-xs flex items-center justify-center gap-1 opacity-90 mt-1">
-            <Clock className="w-3 h-3" />
-            <span>{data.duration} min</span>
-          </div>
-        )}
-        {data.description && (
-          <div className="text-xs mt-2 opacity-80 text-center line-clamp-2 px-1">
-            {data.description}
+          <div className="text-[8px] flex items-center justify-center gap-0.5 opacity-90 mt-0.5">
+            <Clock className="w-2 h-2" />
+            <span>{data.duration}m</span>
           </div>
         )}
       </div>
@@ -45,12 +40,12 @@ export const TaskNode = React.memo(({ data, selected }: any) => {
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 !bg-blue-700 border-2 border-white hover:!bg-blue-800 transition-colors"
+        className="w-2 h-2 !bg-blue-700 border border-white hover:!bg-blue-800 transition-colors"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="w-3 h-3 !bg-blue-700 border-2 border-white hover:!bg-blue-800 transition-colors"
+        className="w-2 h-2 !bg-blue-700 border border-white hover:!bg-blue-800 transition-colors"
       />
     </div>
   );

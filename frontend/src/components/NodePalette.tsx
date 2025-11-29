@@ -51,36 +51,29 @@ export const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
   };
 
   return (
-    <div className="absolute top-4 left-4 bg-white rounded-xl shadow-xl border border-gray-200 p-3 z-40">
-      <div className="mb-3 pb-2 border-b border-gray-200">
-        <h3 className="font-semibold text-gray-900 text-sm">Components</h3>
-        <p className="text-xs text-gray-500 mt-1">Drag to canvas or click to add</p>
+    <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-40 w-44">
+      <div className="mb-2 pb-1.5 border-b border-gray-200">
+        <h3 className="font-bold text-gray-900 text-xs">Components</h3>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {paletteItems.map((item) => (
           <div
             key={item.type}
             draggable
             onDragStart={(e) => onDragStart(e, item.type)}
             onClick={() => onAddNode(item.type)}
-            className="flex items-center gap-3 p-2.5 rounded-lg border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-move transition-all duration-150 group"
+            className="flex items-center gap-2 p-1.5 rounded-md border border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-move transition-all duration-150 group"
+            title={item.description}
           >
-            <div className={`${item.color} text-white p-2 rounded-md group-hover:scale-110 transition-transform`}>
-              {item.icon}
+            <div className={`${item.color} text-white p-1.5 rounded group-hover:scale-110 transition-transform`}>
+              {React.cloneElement(item.icon as React.ReactElement, { size: 16 })}
             </div>
-            <div className="flex-1">
-              <div className="font-medium text-sm text-gray-900">{item.label}</div>
-              <div className="text-xs text-gray-500">{item.description}</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-xs text-gray-900 truncate">{item.label}</div>
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="mt-3 pt-2 border-t border-gray-100">
-        <div className="text-xs text-gray-500">
-          <p>💡 <strong>Tip:</strong> Drag components onto the canvas</p>
-        </div>
       </div>
     </div>
   );
