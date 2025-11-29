@@ -192,7 +192,7 @@ const Settings: React.FC = () => {
     setEditingConfig(config);
     setFormData({
       provider: config.provider,
-      apiKey: config.maskedApiKey || config.apiKey || '', // Show masked API key
+      apiKey: '', // DON'T pre-fill - keep empty for new input
       modelId: config.modelId || '',
     });
     setShowAddForm(true);
@@ -450,8 +450,14 @@ const Settings: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      API Key {editingConfig && <span className="text-xs text-gray-500">(current: {formData.apiKey})</span>}
+                      API Key
                     </label>
+                    {editingConfig && editingConfig.maskedApiKey && (
+                      <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs text-blue-700 font-semibold">Current API Key:</p>
+                        <p className="text-sm font-mono text-blue-900">{editingConfig.maskedApiKey}</p>
+                      </div>
+                    )}
                     <div className="relative">
                       <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
@@ -461,7 +467,7 @@ const Settings: React.FC = () => {
                           setFormData({ ...formData, apiKey: e.target.value });
                           setValidationError(null);
                         }}
-                        placeholder={editingConfig ? "Enter new API key to update" : "sk-ant-..."}
+                        placeholder={editingConfig ? "Enter new API key to update (or leave empty)" : "sk-ant-..."}
                         className="w-full pl-11 pr-12 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
                         required={!editingConfig}
                       />
@@ -475,7 +481,7 @@ const Settings: React.FC = () => {
                     </div>
                     {editingConfig && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Leave empty to keep current API key, or enter a new one to update
+                        Leave empty to keep current API key, or enter a new one and click "Validate & Fetch Models"
                       </p>
                     )}
                     {validationError && (
@@ -505,29 +511,38 @@ const Settings: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Model ID (optional)
+                      Model {availableModels.length > 0 && <span className="text-xs text-green-600 font-semibold">✓ {availableModels.length} models loaded</span>}
                     </label>
-                    <input
-                      type="text"
-                      list="model-suggestions"
-                      value={formData.modelId}
-                      onChange={(e) =>
-                        setFormData({ ...formData, modelId: e.target.value })
-                      }
-                      placeholder="e.g., claude-3-5-sonnet-20241022, gemini-1.5-pro"
-                      className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                    />
-                    {availableModels.length > 0 && (
-                      <datalist id="model-suggestions">
+                    {availableModels.length > 0 ? (
+                      <select
+                        value={formData.modelId}
+                        onChange={(e) =>
+                          setFormData({ ...formData, modelId: e.target.value })
+                        }
+                        className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                      >
+                        <option value="">Use provider default</option>
                         {availableModels.map((model) => (
                           <option key={model.id} value={model.id}>
-                            {model.name} - {model.description}
+                            {model.name} {model.description && `- ${model.description}`}
                           </option>
                         ))}
-                      </datalist>
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={formData.modelId}
+                        onChange={(e) =>
+                          setFormData({ ...formData, modelId: e.target.value })
+                        }
+                        placeholder="e.g., claude-3-5-sonnet-20241022 (or validate API key to load models)"
+                        className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                      />
                     )}
                     <p className="text-xs text-gray-500 mt-1">
-                      Leave empty to use the provider's default model
+                      {availableModels.length > 0
+                        ? 'Select a model from the validated list above'
+                        : 'Click "Validate & Fetch Models" to load available models, or enter manually'}
                     </p>
                   </div>
 
