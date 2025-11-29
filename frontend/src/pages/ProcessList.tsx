@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Home, Settings } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Process } from '../lib/api';
 import { Button } from '../components/ui/button';
@@ -94,6 +95,26 @@ export const ProcessList = () => {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Navigation Buttons */}
+          <div className="mb-4 flex items-center gap-2">
+            <Button
+              onClick={() => navigate('/dashboard')}
+              variant="outline"
+              className="text-sm flex items-center gap-2"
+            >
+              <Home size={16} />
+              Dashboard
+            </Button>
+            <Button
+              onClick={() => navigate('/settings')}
+              variant="outline"
+              className="text-sm flex items-center gap-2"
+            >
+              <Settings size={16} />
+              Settings
+            </Button>
+          </div>
+
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Process Maps</h1>
