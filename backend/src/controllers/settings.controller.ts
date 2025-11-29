@@ -495,3 +495,62 @@ export const validateAndFetchModels = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Fetch models for an existing configuration using its stored API key
+ */
+export const fetchModelsForConfiguration = async (req: Request, res: Response) => {
+  try {
+    const { configId } = req.params;
+    const userId = (req as any).user.userId;
+
+    // Get user's organization
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { organizationId: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get the configuration with the actual API key
+    const config = await prisma.aPIConfiguration.findFirst({
+      where: {
+        id: configId,
+        organizationId: user.organizationId,
+      },
+    });
+
+    if (!config) {
+      return res.status(404).json({ error: 'Configuration not found' });
+    }
+
+    // Fetch models using the stored API key
+    const result = await ProviderValidatorService.validateAndFetchModels(
+      config.provider,
+      config.apiKey,
+      config.config
+    );
+
+    if (!result.valid) {
+      return res.status(400).json({
+        success: false,
+        error: result.error || 'Failed to fetch models with current API key',
+      });
+    }
+
+    res.json({
+      success: true,
+      valid: true,
+      provider: config.provider,
+      models: result.models || [],
+    });
+  } catch (error) {
+    console.error('Fetch models for configuration error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch models',
+    });
+  }
+};

@@ -49,4 +49,10 @@ router.post(
   settingsController.validateAndFetchModels
 );
 
+// GET /api/settings/api-configurations/:configId/models - Fetch models using stored API key
+router.get(
+  '/api-configurations/:configId/models',
+  settingsController.fetchModelsForConfiguration
+);
+
 export default router;

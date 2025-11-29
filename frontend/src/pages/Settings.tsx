@@ -154,6 +154,45 @@ const Settings: React.FC = () => {
     }
   };
 
+  const fetchModelsUsingCurrentKey = async () => {
+    if (!editingConfig) return;
+
+    setFetchingModels(true);
+    setValidationError(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:3100/api/settings/api-configurations/${editingConfig.id}/models`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.valid) {
+        setAvailableModels(data.models || []);
+        if (data.models && data.models.length > 0 && !formData.modelId) {
+          setFormData((prev) => ({ ...prev, modelId: data.models[0].id }));
+        }
+        setValidationError(null);
+        alert(`✅ Models loaded successfully! Found ${data.models?.length || 0} models.`);
+      } else {
+        setValidationError(data.error || 'Failed to fetch models');
+        alert(`❌ ${data.error || 'Failed to fetch models'}`);
+      }
+    } catch (error) {
+      console.error('Failed to fetch models:', error);
+      setValidationError('Network error. Please try again.');
+      alert('❌ Failed to fetch models. Please check your connection.');
+    } finally {
+      setFetchingModels(false);
+    }
+  };
+
   const handleAddConfiguration = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -488,25 +527,49 @@ const Settings: React.FC = () => {
                       <p className="text-xs text-red-600 mt-1">❌ {validationError}</p>
                     )}
 
-                    {/* Validate & Fetch Models Button */}
-                    <button
-                      type="button"
-                      onClick={validateAndFetchModels}
-                      disabled={fetchingModels || !formData.apiKey}
-                      className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {fetchingModels ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          Validating...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4" />
-                          Validate & Fetch Available Models
-                        </>
+                    {/* Validate & Fetch Models Buttons */}
+                    <div className="mt-2 flex gap-2">
+                      {editingConfig && (
+                        <button
+                          type="button"
+                          onClick={fetchModelsUsingCurrentKey}
+                          disabled={fetchingModels}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Load models using the current stored API key"
+                        >
+                          {fetchingModels ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4" />
+                              Load Models (Current Key)
+                            </>
+                          )}
+                        </button>
                       )}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={validateAndFetchModels}
+                        disabled={fetchingModels || !formData.apiKey}
+                        className={`${editingConfig ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title="Validate a new API key and fetch models"
+                      >
+                        {fetchingModels ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Validating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4" />
+                            {editingConfig ? 'Validate New Key' : 'Validate & Fetch Models'}
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <div>
