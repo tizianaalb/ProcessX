@@ -7,11 +7,7 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
-// POST /api/processes/:processId/analyze - Analyze process with AI
-router.post(
-  '/processes/:processId/analyze',
-  recommendationController.analyzeProcess
-);
+// NOTE: /processes/:processId/analyze is now handled by ai-analysis.routes.ts
 
 // POST /api/processes/:processId/recommendations - Generate recommendations
 router.post(
