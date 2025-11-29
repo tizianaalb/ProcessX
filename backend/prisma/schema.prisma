@@ -44,6 +44,8 @@ model User {
   targetProcesses       TargetProcess[] @relation("TargetProcessCreator")
   exports              Export[]
   auditLogs            AuditLog[]
+  initiatedAnalyses    AIAnalysis[]
+  approvedRecommendations ProcessRecommendation[] @relation("ApprovedRecommendations")
 
   @@index([organizationId])
   @@index([email])
@@ -77,6 +79,8 @@ model Process {
   recommendations Recommendation[]
   targetProcesses TargetProcess[]
   exports         Export[]
+  aiAnalyses      AIAnalysis[]
+  processRecommendations ProcessRecommendation[]
 
   @@index([organizationId])
   @@index([createdById])
@@ -272,6 +276,72 @@ model APIConfiguration {
   @@index([provider])
   @@unique([organizationId, provider])
   @@map("api_configurations")
+}
+
+// AI Analysis Results
+model AIAnalysis {
+  id                  String    @id @default(uuid())
+  processId           String    @map("process_id")
+  analysisType        String    // FULL, PAIN_POINTS, RECOMMENDATIONS, TO_BE
+  status              String    // PENDING, IN_PROGRESS, COMPLETED, FAILED
+
+  // Results
+  understanding       Json?     // Process understanding
+  detectedPainPoints  Json?     // Array of detected pain points
+  recommendations     Json?     // Array of recommendations
+  generatedProcess    Json?     // TO-BE process structure
+
+  // Metadata
+  aiProvider          String    // Which AI was used
+  modelId             String?   // Model identifier
+  tokensUsed          Int?      @map("tokens_used")
+  cost                Decimal?  @db.Decimal(10, 4)
+  errorMessage        String?   @map("error_message")
+
+  initiatedById       String    @map("initiated_by_id")
+  completedAt         DateTime? @map("completed_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  process             Process   @relation(fields: [processId], references: [id], onDelete: Cascade)
+  initiatedBy         User      @relation(fields: [initiatedById], references: [id])
+  processRecommendations ProcessRecommendation[]
+
+  @@index([processId])
+  @@index([status])
+  @@map("ai_analyses")
+}
+
+// Process Improvement Recommendations
+model ProcessRecommendation {
+  id                  String    @id @default(uuid())
+  processId           String    @map("process_id")
+  analysisId          String?   @map("analysis_id")
+
+  category            String    // QUICK_WIN, STRATEGIC, AUTOMATION, INTEGRATION, REDESIGN
+  priority            String    // HIGH, MEDIUM, LOW
+  title               String
+  description         String    @db.Text
+  expectedBenefits    Json      // Array of benefits
+
+  implementation      Json      // {effort, timeline, steps}
+  metrics             Json      // {timeSaving, costSaving, riskReduction}
+
+  status              String    @default("PENDING") // PENDING, APPROVED, REJECTED, IMPLEMENTED
+  approvedById        String?   @map("approved_by_id")
+  approvedAt          DateTime? @map("approved_at")
+  implementedAt       DateTime? @map("implemented_at")
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  process             Process   @relation(fields: [processId], references: [id], onDelete: Cascade)
+  analysis            AIAnalysis? @relation(fields: [analysisId], references: [id])
+  approvedBy          User?     @relation("ApprovedRecommendations", fields: [approvedById], references: [id])
+
+  @@index([processId])
+  @@index([status])
+  @@index([priority])
+  @@map("process_recommendations")
 }
 
 // Audit Logs
