@@ -276,17 +276,18 @@ export const addProcessSteps = async (req: Request, res: Response): Promise<void
 
     // Create all steps
     const createdSteps = await Promise.all(
-      validatedSteps.map((step, index) =>
-        prisma.processStep.create({
+      validatedSteps.map((step, index) => {
+        const { position, ...stepData } = step;
+        return prisma.processStep.create({
           data: {
-            ...step,
+            ...stepData,
             processId,
             order: startOrder + index,
-            positionX: step.position.x,
-            positionY: step.position.y,
+            positionX: position.x,
+            positionY: position.y,
           },
-        })
-      )
+        });
+      })
     );
 
     res.status(201).json({
@@ -300,6 +301,69 @@ export const addProcessSteps = async (req: Request, res: Response): Promise<void
     }
     console.error('Add process steps error:', error);
     res.status(500).json({ error: 'Failed to add process steps' });
+  }
+};
+
+// Update existing process steps
+export const updateProcessSteps = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id: processId } = req.params;
+    const organizationId = req.user!.organizationId;
+    const { steps } = req.body;
+
+    if (!Array.isArray(steps)) {
+      res.status(400).json({ error: 'Steps must be an array' });
+      return;
+    }
+
+    // Check if process exists and belongs to the organization
+    const process = await prisma.process.findFirst({
+      where: {
+        id: processId,
+        organizationId,
+      },
+    });
+
+    if (!process) {
+      res.status(404).json({ error: 'Process not found' });
+      return;
+    }
+
+    // Update all steps
+    const updatedSteps = await Promise.all(
+      steps.map(async (step: any) => {
+        const { id, position, ...updateData } = step;
+
+        // Verify step belongs to this process
+        const existingStep = await prisma.processStep.findFirst({
+          where: {
+            id,
+            processId,
+          },
+        });
+
+        if (!existingStep) {
+          throw new Error(`Step ${id} not found in this process`);
+        }
+
+        return prisma.processStep.update({
+          where: { id },
+          data: {
+            ...updateData,
+            positionX: position?.x ?? existingStep.positionX,
+            positionY: position?.y ?? existingStep.positionY,
+          },
+        });
+      })
+    );
+
+    res.json({
+      message: 'Process steps updated successfully',
+      steps: updatedSteps,
+    });
+  } catch (error) {
+    console.error('Update process steps error:', error);
+    res.status(500).json({ error: 'Failed to update process steps' });
   }
 };
 

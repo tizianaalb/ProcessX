@@ -237,7 +237,21 @@ export const ProcessEditor = () => {
     }
   };
 
-  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+  const handleNodeClick = useCallback(async (_event: React.MouseEvent, node: Node) => {
+    // Check if this is an unsaved node (temporary ID)
+    if (node.id.startsWith('node-')) {
+      const confirmed = window.confirm(
+        'This node needs to be saved before adding pain points. Save the process now?'
+      );
+      if (confirmed) {
+        await handleSave();
+        // After save, the node IDs will be refreshed, so we can't continue
+        alert('Process saved! Please click the node again to add a pain point.');
+        return;
+      }
+      return;
+    }
+
     setSelectedNode(node);
     setShowPainPointModal(true);
     setEditingPainPoint(null);
@@ -468,20 +482,56 @@ export const ProcessEditor = () => {
         });
       }
 
-      // Convert nodes back to process steps
-      const newSteps: ProcessStepInput[] = nodes
-        .filter((node) => !process.steps?.find((s) => s.id === node.id))
-        .map((node) => ({
-          name: node.data.label || 'Untitled',
-          description: node.data.description,
-          type: node.type?.toUpperCase() as 'START' | 'TASK' | 'DECISION' | 'END',
-          duration: node.data.duration,
-          position: { x: node.position.x, y: node.position.y },
-          metadata: node.data.metadata,
-        }));
+      // Separate new nodes from existing nodes
+      const newNodes = nodes.filter((node) => !process.steps?.find((s) => s.id === node.id));
+      const existingNodes = nodes.filter((node) => process.steps?.find((s) => s.id === node.id));
 
+      // Convert new nodes to process steps
+      const newSteps: ProcessStepInput[] = newNodes.map((node) => ({
+        name: node.data.label || 'Untitled',
+        description: node.data.description,
+        type: node.type?.toUpperCase() as 'START' | 'TASK' | 'DECISION' | 'END',
+        duration: node.data.duration,
+        position: { x: node.position.x, y: node.position.y },
+        metadata: node.data.metadata,
+      }));
+
+      // Detect modified nodes (compare with process.steps)
+      const modifiedSteps = existingNodes
+        .map((node) => {
+          const originalStep = process.steps?.find((s) => s.id === node.id);
+          if (!originalStep) return null;
+
+          // Check if anything changed
+          const hasChanges =
+            originalStep.name !== (node.data.label || 'Untitled') ||
+            originalStep.description !== node.data.description ||
+            originalStep.type !== node.type?.toUpperCase() ||
+            originalStep.duration !== node.data.duration ||
+            originalStep.positionX !== node.position.x ||
+            originalStep.positionY !== node.position.y;
+
+          if (!hasChanges) return null;
+
+          return {
+            id: node.id,
+            name: node.data.label || 'Untitled',
+            description: node.data.description,
+            type: node.type?.toUpperCase(),
+            duration: node.data.duration,
+            position: { x: node.position.x, y: node.position.y },
+          };
+        })
+        .filter(Boolean);
+
+      // Save new steps
       if (newSteps.length > 0) {
         await api.addProcessSteps(process.id, newSteps);
+      }
+
+      // Update modified steps
+      if (modifiedSteps.length > 0) {
+        await api.updateProcessSteps(process.id, modifiedSteps as any);
       }
 
       // Convert edges back to connections
@@ -766,7 +816,20 @@ export const ProcessEditor = () => {
                 () => handleEditNode(contextMenu.target),
                 () => handleDuplicateNode(contextMenu.target),
                 () => handleDeleteNode(contextMenu.target.id),
-                () => {
+                async () => {
+                  // Check if this is an unsaved node (temporary ID)
+                  if (contextMenu.target.id.startsWith('node-')) {
+                    const confirmed = window.confirm(
+                      'This node needs to be saved before adding pain points. Save the process now?'
+                    );
+                    if (confirmed) {
+                      await handleSave();
+                      alert('Process saved! Please right-click the node again to add a pain point.');
+                    }
+                    setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null });
+                    return;
+                  }
+
                   setSelectedNode(contextMenu.target);
                   setShowPainPointModal(true);
                   setEditingPainPoint(null);
@@ -825,6 +888,7 @@ export const ProcessEditor = () => {
                 onEdit={handleEditPainPoint}
                 onDelete={handleDeletePainPoint}
                 loading={loadingPainPoints}
+                nodes={nodes}
               />
             </div>
           </div>

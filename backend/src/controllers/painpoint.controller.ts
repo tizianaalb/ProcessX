@@ -4,7 +4,12 @@ import { prisma } from '../services/prisma.js';
 
 // Validation schemas
 const createPainPointSchema = z.object({
-  processStepId: z.string().uuid().optional(),
+  processStepId: z.union([
+    z.string().uuid(),
+    z.literal(''),
+    z.null(),
+    z.undefined()
+  ]).transform(val => (val === '' || val === null || val === undefined) ? undefined : val).optional(),
   category: z.enum([
     'BOTTLENECK',
     'REWORK',
@@ -17,12 +22,15 @@ const createPainPointSchema = z.object({
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
   title: z.string().min(1, 'Title is required').max(255),
   description: z.string().min(1, 'Description is required'),
-  impact: z.string().optional(),
+  impact: z.string().optional().transform(val => (val === '' ? undefined : val)),
   estimatedCost: z.number().int().min(0).optional(),
   estimatedTime: z.number().int().min(0).optional(),
-  frequency: z
-    .enum(['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY'])
-    .optional(),
+  frequency: z.union([
+    z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY']),
+    z.literal(''),
+    z.null(),
+    z.undefined()
+  ]).transform(val => (val === '' || val === null || val === undefined) ? undefined : val).optional(),
 });
 
 const updatePainPointSchema = z.object({
@@ -212,11 +220,12 @@ export const createPainPoint = async (req: Request, res: Response): Promise<void
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Pain point validation error:', error.errors);
       res.status(400).json({ error: 'Validation error', details: error.errors });
       return;
     }
     console.error('Create pain point error:', error);
-    res.status(500).json({ error: 'Failed to create pain point' });
+    res.status(500).json({ error: 'Failed to create pain point', message: error instanceof Error ? error.message : 'Unknown error' });
   }
 };
 

@@ -96,9 +96,22 @@ export const PainPointModal = ({
 
     try {
       setSubmitting(true);
-      await onSubmit(formData);
+      // Clean up the data before sending - remove empty strings and convert to undefined
+      const cleanedData: CreatePainPointData = {
+        processStepId: formData.processStepId || undefined,
+        category: formData.category,
+        severity: formData.severity,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        impact: formData.impact?.trim() || undefined,
+        estimatedCost: formData.estimatedCost,
+        estimatedTime: formData.estimatedTime,
+        frequency: formData.frequency,
+      };
+      await onSubmit(cleanedData);
       onClose();
     } catch (error: any) {
+      console.error('Failed to save pain point:', error);
       alert('Failed to save pain point: ' + error.message);
     } finally {
       setSubmitting(false);

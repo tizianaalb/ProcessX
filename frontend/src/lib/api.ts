@@ -288,6 +288,19 @@ class ApiClient {
     );
   }
 
+  async updateProcessSteps(
+    processId: string,
+    steps: Array<{ id: string; name: string; description?: string; type?: string; duration?: number; position?: { x: number; y: number } }>
+  ): Promise<{ steps: ProcessStep[]; message: string }> {
+    return this.request<{ steps: ProcessStep[]; message: string }>(
+      `/api/processes/${processId}/steps`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ steps }),
+      }
+    );
+  }
+
   async addProcessConnections(
     processId: string,
     connections: ProcessConnectionInput[]

@@ -204,7 +204,7 @@ export const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
     <div
       ref={paletteRef}
       style={{ left: position.x, top: position.y }}
-      className="absolute bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-40 w-44"
+      className="absolute bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-40 w-80"
       onMouseDown={handleMouseDown}
     >
       <div className="mb-2 pb-1.5 border-b border-gray-200 flex items-center gap-1 drag-handle cursor-move">
@@ -212,18 +212,18 @@ export const NodePalette: React.FC<NodePaletteProps> = ({ onAddNode }) => {
         <h3 className="font-bold text-gray-900 text-xs flex-1">Components</h3>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
         {paletteItems.map((item) => (
           <div
             key={item.type}
             draggable
             onDragStart={(e) => onDragStart(e, item.type)}
             onClick={() => onAddNode(item.type)}
-            className="flex items-center gap-2 p-1.5 rounded-md border border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-move transition-all duration-150 group"
+            className="flex items-center gap-1.5 p-1.5 rounded-md border border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-move transition-all duration-150 group"
             title={item.description}
           >
-            <div className={`${item.color} text-white p-1.5 rounded group-hover:scale-110 transition-transform`}>
-              {React.cloneElement(item.icon as React.ReactElement, { size: 16 })}
+            <div className={`${item.color} text-white p-1 rounded group-hover:scale-110 transition-transform`}>
+              {React.cloneElement(item.icon as React.ReactElement, { size: 14 })}
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-xs text-gray-900 truncate">{item.label}</div>

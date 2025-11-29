@@ -6,6 +6,7 @@ import {
   updateProcess,
   deleteProcess,
   addProcessSteps,
+  updateProcessSteps,
   addProcessConnections,
 } from '../controllers/process.controller.js';
 import { authenticate } from '../middleware/auth.js';
@@ -24,6 +25,7 @@ router.delete('/:id', deleteProcess);
 
 // Process steps and connections
 router.post('/:id/steps', addProcessSteps);
+router.put('/:id/steps', updateProcessSteps);
 router.post('/:id/connections', addProcessConnections);
 
 export default router;

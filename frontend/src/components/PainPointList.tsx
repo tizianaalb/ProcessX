@@ -8,6 +8,7 @@ interface PainPointListProps {
   onEdit: (painPoint: PainPoint) => void;
   onDelete: (id: string) => void;
   loading?: boolean;
+  nodes?: Array<{ id: string; data: { label: string }; type: string }>;
 }
 
 const SEVERITY_COLORS = {
@@ -79,6 +80,7 @@ export const PainPointList = ({
   onEdit,
   onDelete,
   loading,
+  nodes = [],
 }: PainPointListProps) => {
   const [filterSeverity, setFilterSeverity] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -292,6 +294,46 @@ export const PainPointList = ({
               key={painPoint.id}
               className={`${severityConfig.bg} border-2 ${severityConfig.border} rounded-xl p-4 shadow-md hover:shadow-2xl transition-all duration-200 hover:scale-[1.02] group`}
             >
+              {/* Linked Component/Task - PROMINENT */}
+              {painPoint.processStep && (() => {
+                // Find the current node to get the latest name
+                const currentNode = nodes.find(n => n.id === painPoint.processStepId);
+                const displayName = currentNode?.data.label || painPoint.processStep.name;
+                const displayType = currentNode?.type?.toUpperCase() || painPoint.processStep.type;
+
+                return (
+                  <div className="mb-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl px-4 py-2.5 border-2 border-blue-700 shadow-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-white rounded-lg p-1.5">
+                        <div className="w-3 h-3 bg-blue-600 rounded"></div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-[10px] text-blue-100 font-bold uppercase tracking-wider">Linked to Component</div>
+                        <div className="text-sm text-white font-bold">{displayName}</div>
+                      </div>
+                      <div className="bg-white/20 text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase">
+                        {displayType}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* General Pain Point Indicator */}
+              {!painPoint.processStep && (
+                <div className="mb-3 bg-gradient-to-r from-gray-400 to-gray-500 rounded-xl px-4 py-2.5 border-2 border-gray-600 shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white rounded-lg p-1.5">
+                      <div className="w-3 h-3 bg-gray-600 rounded"></div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[10px] text-gray-100 font-bold uppercase tracking-wider">General Pain Point</div>
+                      <div className="text-sm text-white font-bold">Not linked to specific component</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Header with Actions */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
@@ -328,16 +370,6 @@ export const PainPointList = ({
                   </button>
                 </div>
               </div>
-
-              {/* Process Step */}
-              {painPoint.processStep && (
-                <div className="mb-2 bg-white/60 rounded-lg px-3 py-1.5 border border-gray-200">
-                  <div className="text-xs text-gray-600 flex items-center gap-1">
-                    <span className="font-semibold">Process Step:</span>
-                    <span className="font-medium text-gray-800">{painPoint.processStep.name}</span>
-                  </div>
-                </div>
-              )}
 
               {/* Description */}
               <p className="text-sm text-gray-800 mb-3 leading-relaxed">
