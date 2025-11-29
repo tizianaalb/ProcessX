@@ -535,8 +535,10 @@ export const ProcessEditor = () => {
       }
 
       // Convert edges back to connections
+      // Filter out connections with unsaved nodes (temporary IDs starting with "node-")
       const newConnections: ProcessConnectionInput[] = edges
         .filter((edge) => !process.connections?.find((c) => c.id === edge.id))
+        .filter((edge) => !edge.source.startsWith('node-') && !edge.target.startsWith('node-'))
         .map((edge) => ({
           sourceStepId: edge.source,
           targetStepId: edge.target,
