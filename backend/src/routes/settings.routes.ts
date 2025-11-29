@@ -43,4 +43,10 @@ router.get(
   settingsController.getAvailableModels
 );
 
+// POST /api/settings/validate-and-fetch-models - Validate API key and fetch models dynamically
+router.post(
+  '/validate-and-fetch-models',
+  settingsController.validateAndFetchModels
+);
+
 export default router;

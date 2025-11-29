@@ -13,6 +13,7 @@ import {
   Sparkles,
   Eye,
   EyeOff,
+  Edit,
 } from 'lucide-react';
 
 interface APIConfiguration {
@@ -24,6 +25,8 @@ interface APIConfiguration {
   config?: any;
   createdAt: string;
   updatedAt: string;
+  apiKey?: string; // Masked API key
+  maskedApiKey?: string;
 }
 
 interface Model {
@@ -40,6 +43,9 @@ const Settings: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [availableModels, setAvailableModels] = useState<Model[]>([]);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<APIConfiguration | null>(null);
+  const [fetchingModels, setFetchingModels] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -56,7 +62,7 @@ const Settings: React.FC = () => {
     try {
       const response = await fetch('http://localhost:3100/api/settings/api-configurations', {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
       });
 
@@ -77,7 +83,7 @@ const Settings: React.FC = () => {
         `http://localhost:3100/api/settings/available-models/${provider}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
           },
         }
       );
@@ -101,6 +107,53 @@ const Settings: React.FC = () => {
     }
   }, [formData.provider, showAddForm]);
 
+  const validateAndFetchModels = async () => {
+    if (!formData.apiKey || formData.apiKey.trim() === '') {
+      setValidationError('Please enter an API key first');
+      return;
+    }
+
+    setFetchingModels(true);
+    setValidationError(null);
+
+    try {
+      const response = await fetch(
+        'http://localhost:3100/api/settings/validate-and-fetch-models',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+          body: JSON.stringify({
+            provider: formData.provider,
+            apiKey: formData.apiKey,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.valid) {
+        setAvailableModels(data.models || []);
+        if (data.models && data.models.length > 0) {
+          setFormData((prev) => ({ ...prev, modelId: data.models[0].id }));
+        }
+        setValidationError(null);
+        alert('✅ API key validated successfully! Models loaded.');
+      } else {
+        setValidationError(data.error || 'Failed to validate API key');
+        alert(`❌ ${data.error || 'Failed to validate API key'}`);
+      }
+    } catch (error) {
+      console.error('Failed to validate and fetch models:', error);
+      setValidationError('Network error. Please try again.');
+      alert('❌ Failed to validate API key. Please check your connection.');
+    } finally {
+      setFetchingModels(false);
+    }
+  };
+
   const handleAddConfiguration = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -109,7 +162,7 @@ const Settings: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
         body: JSON.stringify({
           ...formData,
@@ -135,6 +188,64 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleEditConfiguration = (config: APIConfiguration) => {
+    setEditingConfig(config);
+    setFormData({
+      provider: config.provider,
+      apiKey: config.maskedApiKey || config.apiKey || '', // Show masked API key
+      modelId: config.modelId || '',
+    });
+    setShowAddForm(true);
+    fetchAvailableModels(config.provider);
+    setValidationError(null);
+  };
+
+  const handleUpdateConfiguration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingConfig) return;
+
+    try {
+      const updatePayload: any = {};
+
+      // Only include fields that have values
+      if (formData.apiKey) {
+        updatePayload.apiKey = formData.apiKey;
+      }
+      if (formData.modelId) {
+        updatePayload.modelId = formData.modelId;
+      }
+
+      const response = await fetch(
+        `http://localhost:3100/api/settings/api-configurations/${editingConfig.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          },
+          body: JSON.stringify(updatePayload),
+        }
+      );
+
+      if (response.ok) {
+        setShowAddForm(false);
+        setEditingConfig(null);
+        setFormData({ provider: 'ANTHROPIC', apiKey: '', modelId: '' });
+        fetchConfigurations();
+        alert('✅ API configuration updated successfully!');
+      } else {
+        const error = await response.json();
+        const errorMsg = error.error || 'Failed to update configuration';
+        const errorDetails = error.message ? `\n\n${error.message}` : '';
+        alert(`❌ Error: ${errorMsg}${errorDetails}\n\nStatus: ${response.status}`);
+        console.error('API Configuration Error:', error);
+      }
+    } catch (error) {
+      console.error('Failed to update configuration:', error);
+      alert(`❌ Failed to update configuration.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nPlease check your network connection and try again.`);
+    }
+  };
+
   const handleDeleteConfiguration = async (configId: string) => {
     if (!confirm('Are you sure you want to delete this API configuration?')) {
       return;
@@ -146,7 +257,7 @@ const Settings: React.FC = () => {
         {
           method: 'DELETE',
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
           },
         }
       );
@@ -170,7 +281,7 @@ const Settings: React.FC = () => {
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
           },
         }
       );
@@ -298,20 +409,26 @@ const Settings: React.FC = () => {
               </div>
             )}
 
-            {/* Add Configuration Form */}
+            {/* Add/Edit Configuration Form */}
             {showAddForm && (
               <div className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-gray-900">Add New AI Provider</h3>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {editingConfig ? 'Edit AI Provider' : 'Add New AI Provider'}
+                  </h3>
                   <button
-                    onClick={() => setShowAddForm(false)}
+                    onClick={() => {
+                      setShowAddForm(false);
+                      setEditingConfig(null);
+                      setFormData({ provider: 'ANTHROPIC', apiKey: '', modelId: '' });
+                    }}
                     className="text-gray-500 hover:text-gray-700"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                <form onSubmit={handleAddConfiguration} className="space-y-4">
+                <form onSubmit={editingConfig ? handleUpdateConfiguration : handleAddConfiguration} className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Provider
@@ -321,7 +438,8 @@ const Settings: React.FC = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, provider: e.target.value })
                       }
-                      className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                      disabled={!!editingConfig}
+                      className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="ANTHROPIC">🔮 Anthropic Claude</option>
                       <option value="GOOGLE_GEMINI">✨ Google Gemini</option>
@@ -332,19 +450,20 @@ const Settings: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      API Key
+                      API Key {editingConfig && <span className="text-xs text-gray-500">(current: {formData.apiKey})</span>}
                     </label>
                     <div className="relative">
                       <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type={showApiKey ? "text" : "password"}
                         value={formData.apiKey}
-                        onChange={(e) =>
-                          setFormData({ ...formData, apiKey: e.target.value })
-                        }
-                        placeholder="sk-ant-..."
+                        onChange={(e) => {
+                          setFormData({ ...formData, apiKey: e.target.value });
+                          setValidationError(null);
+                        }}
+                        placeholder={editingConfig ? "Enter new API key to update" : "sk-ant-..."}
                         className="w-full pl-11 pr-12 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                        required
+                        required={!editingConfig}
                       />
                       <button
                         type="button"
@@ -354,6 +473,34 @@ const Settings: React.FC = () => {
                         {showApiKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
+                    {editingConfig && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Leave empty to keep current API key, or enter a new one to update
+                      </p>
+                    )}
+                    {validationError && (
+                      <p className="text-xs text-red-600 mt-1">❌ {validationError}</p>
+                    )}
+
+                    {/* Validate & Fetch Models Button */}
+                    <button
+                      type="button"
+                      onClick={validateAndFetchModels}
+                      disabled={fetchingModels || !formData.apiKey}
+                      className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {fetchingModels ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Validating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          Validate & Fetch Available Models
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   <div>
@@ -390,11 +537,15 @@ const Settings: React.FC = () => {
                       className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
                     >
                       <Save className="w-5 h-5" />
-                      Save Configuration
+                      {editingConfig ? 'Update Configuration' : 'Save Configuration'}
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowAddForm(false)}
+                      onClick={() => {
+                        setShowAddForm(false);
+                        setEditingConfig(null);
+                        setFormData({ provider: 'ANTHROPIC', apiKey: '', modelId: '' });
+                      }}
                       className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
                     >
                       Cancel
@@ -462,6 +613,13 @@ const Settings: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEditConfiguration(config)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit configuration"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
                           {!config.isDefault && (
                             <button
                               onClick={() => handleSetDefault(config.id)}
@@ -473,6 +631,7 @@ const Settings: React.FC = () => {
                           <button
                             onClick={() => handleDeleteConfiguration(config.id)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete configuration"
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>

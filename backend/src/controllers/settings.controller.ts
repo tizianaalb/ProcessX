@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../services/prisma';
 import { z } from 'zod';
+import { ProviderValidatorService } from '../services/provider-validator.service';
 
 // Validation schema for API configuration
 const apiConfigSchema = z.object({
@@ -11,6 +12,16 @@ const apiConfigSchema = z.object({
   isDefault: z.boolean().optional(),
   config: z.record(z.any()).optional(),
 });
+
+/**
+ * Helper function to mask API key for display
+ */
+const maskApiKey = (apiKey: string): string => {
+  if (!apiKey || apiKey.length < 8) return '***';
+  const start = apiKey.substring(0, 7);
+  const end = apiKey.substring(apiKey.length - 4);
+  return `${start}...${end}`;
+};
 
 /**
  * Get all API configurations for the organization
@@ -42,7 +53,7 @@ export const getAPIConfigurations = async (req: Request, res: Response) => {
         config: true,
         createdAt: true,
         updatedAt: true,
-        // Exclude apiKey for security
+        apiKey: true, // Include for masking
       },
       orderBy: [
         { isDefault: 'desc' },
@@ -50,9 +61,16 @@ export const getAPIConfigurations = async (req: Request, res: Response) => {
       ],
     });
 
+    // Mask API keys before sending to client
+    const maskedConfigurations = configurations.map((config) => ({
+      ...config,
+      apiKey: maskApiKey(config.apiKey),
+      maskedApiKey: maskApiKey(config.apiKey),
+    }));
+
     res.json({
       success: true,
-      configurations,
+      configurations: maskedConfigurations,
     });
   } catch (error) {
     console.error('Get API configurations error:', error);
@@ -352,7 +370,7 @@ export const setDefaultConfiguration = async (req: Request, res: Response) => {
 };
 
 /**
- * Get available models for a provider
+ * Get available models for a provider (static list - fallback)
  */
 export const getAvailableModels = async (req: Request, res: Response) => {
   try {
@@ -434,5 +452,46 @@ export const getAvailableModels = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Get available models error:', error);
     res.status(500).json({ error: 'Failed to retrieve available models' });
+  }
+};
+
+/**
+ * Validate API key and fetch available models dynamically
+ */
+export const validateAndFetchModels = async (req: Request, res: Response) => {
+  try {
+    const { provider, apiKey, config } = req.body;
+
+    if (!provider || !apiKey) {
+      return res.status(400).json({
+        error: 'Provider and API key are required',
+      });
+    }
+
+    const result = await ProviderValidatorService.validateAndFetchModels(
+      provider,
+      apiKey,
+      config
+    );
+
+    if (!result.valid) {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+      });
+    }
+
+    res.json({
+      success: true,
+      valid: true,
+      provider,
+      models: result.models || [],
+    });
+  } catch (error) {
+    console.error('Validate and fetch models error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to validate API key and fetch models',
+    });
   }
 };
