@@ -505,14 +505,16 @@ const ProcessEditorInner = () => {
           const originalStep = process.steps?.find((s) => s.id === node.id);
           if (!originalStep) return null;
 
-          // Check if anything changed
+          // Check if anything changed (including metadata)
+          const metadataChanged = JSON.stringify(originalStep.metadata) !== JSON.stringify(node.data.metadata);
           const hasChanges =
             originalStep.name !== (node.data.label || 'Untitled') ||
             originalStep.description !== node.data.description ||
             originalStep.type !== node.type?.toUpperCase() ||
             originalStep.duration !== node.data.duration ||
             originalStep.positionX !== node.position.x ||
-            originalStep.positionY !== node.position.y;
+            originalStep.positionY !== node.position.y ||
+            metadataChanged;
 
           if (!hasChanges) return null;
 
@@ -523,6 +525,7 @@ const ProcessEditorInner = () => {
             type: node.type?.toUpperCase(),
             duration: node.data.duration,
             position: { x: node.position.x, y: node.position.y },
+            metadata: node.data.metadata,
           };
         })
         .filter(Boolean);
