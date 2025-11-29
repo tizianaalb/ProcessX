@@ -11,7 +11,7 @@ import ReactFlow, {
   ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings, Sparkles, Lightbulb } from 'lucide-react';
+import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings, Sparkles, Lightbulb, Maximize2 } from 'lucide-react';
 
 // Types for ReactFlow
 type Node = any;
@@ -146,6 +146,13 @@ const ProcessEditorInner = () => {
 
       setNodes(flowNodes);
       setEdges(flowEdges);
+
+      // Auto-fit view to show all nodes after a short delay
+      setTimeout(() => {
+        if (reactFlowInstance && flowNodes.length > 0) {
+          reactFlowInstance.fitView({ padding: 0.2, duration: 400 });
+        }
+      }, 100);
     } catch (error: any) {
       alert('Failed to load process: ' + error.message);
       navigate('/processes');
@@ -592,6 +599,12 @@ const ProcessEditorInner = () => {
     }
   };
 
+  const handleFitView = () => {
+    if (reactFlowInstance) {
+      reactFlowInstance.fitView({ padding: 0.2, duration: 400 });
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -752,6 +765,16 @@ const ProcessEditorInner = () => {
           >
             <AlertTriangle size={16} />
             Add Pain Point
+          </Button>
+          <Button
+            onClick={handleFitView}
+            disabled={!process || nodes.length === 0}
+            variant="outline"
+            className="flex items-center gap-2"
+            title="Fit all components to view"
+          >
+            <Maximize2 size={16} />
+            Fit to View
           </Button>
           <Button onClick={handleSave} disabled={saving || !process} className="bg-blue-600 hover:bg-blue-700 text-white">
             {saving ? 'Saving...' : 'Save Process'}
