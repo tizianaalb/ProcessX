@@ -315,6 +315,65 @@ export const implementRecommendation = async (req: Request, res: Response) => {
 };
 
 /**
+ * Delete an analysis
+ * DELETE /api/analyses/:analysisId
+ */
+export const deleteAnalysis = async (req: Request, res: Response) => {
+  try {
+    const { analysisId } = req.params;
+    const user = (req as any).user;
+
+    // Verify analysis exists and user has access
+    const analysis = await prisma.aIAnalysis.findUnique({
+      where: { id: analysisId },
+      include: {
+        process: {
+          select: {
+            organizationId: true,
+          },
+        },
+      },
+    });
+
+    if (!analysis) {
+      return res.status(404).json({
+        success: false,
+        message: 'Analysis not found',
+      });
+    }
+
+    if (analysis.process.organizationId !== user.organizationId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied',
+      });
+    }
+
+    // Delete related recommendations first (cascade should handle this, but being explicit)
+    await prisma.processRecommendation.deleteMany({
+      where: { analysisId },
+    });
+
+    // Delete the analysis
+    await prisma.aIAnalysis.delete({
+      where: { id: analysisId },
+    });
+
+    res.json({
+      success: true,
+      message: 'Analysis deleted successfully',
+    });
+  } catch (error: any) {
+    console.error('Error deleting analysis:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete analysis',
+      error: error.message,
+    });
+  }
+};
+
+/**
  * Get recommendations for a process
  * GET /api/processes/:processId/recommendations
  */

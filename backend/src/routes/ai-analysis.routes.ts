@@ -27,6 +27,9 @@ router.get('/processes/:processId/recommendations', aiAnalysisController.getProc
 // Get specific analysis result
 router.get('/analyses/:analysisId', aiAnalysisController.getAnalysis);
 
+// Delete an analysis
+router.delete('/analyses/:analysisId', aiAnalysisController.deleteAnalysis);
+
 /**
  * Recommendation Routes
  */

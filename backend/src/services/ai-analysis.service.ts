@@ -92,7 +92,7 @@ export interface DetectedPainPoint {
   estimatedCost: number | null;
   estimatedTime: number | null;
   frequency: string | null;
-  processStepId?: string;
+  processStepId?: string | number; // Can be UUID (string) or step order (number)
 }
 
 export interface ProcessRecommendation {
@@ -247,7 +247,26 @@ export class AIAnalysisService {
         select: { organizationId: true, createdById: true },
       });
 
+      // Fetch process steps to map step order to step ID
+      const processSteps = await prisma.processStep.findMany({
+        where: { processId },
+        select: { id: true, order: true },
+      });
+      const stepOrderToIdMap = new Map(processSteps.map((step) => [step.order, step.id]));
+
       for (const painPoint of painPoints) {
+        // Map step order/number to actual step UUID
+        let actualStepId: string | undefined;
+        if (painPoint.processStepId) {
+          // If it's a number, treat it as step order
+          if (typeof painPoint.processStepId === 'number') {
+            actualStepId = stepOrderToIdMap.get(painPoint.processStepId);
+          } else {
+            // If it's already a string UUID, use it directly
+            actualStepId = painPoint.processStepId;
+          }
+        }
+
         await prisma.painPoint.create({
           data: {
             processId,
@@ -261,7 +280,7 @@ export class AIAnalysisService {
             estimatedTime: painPoint.estimatedTime,
             frequency: painPoint.frequency,
             isAiDetected: true,
-            ...(painPoint.processStepId && { processStepId: painPoint.processStepId }),
+            ...(actualStepId && { processStepId: actualStepId }),
           },
         });
       }
