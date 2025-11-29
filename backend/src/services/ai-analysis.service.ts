@@ -82,10 +82,8 @@ export interface AnalysisResult {
 }
 
 export class AIAnalysisService {
-  private aiService: AIService;
-
   constructor() {
-    this.aiService = new AIService();
+    // AIService uses static methods, no need to instantiate
   }
 
   /**
@@ -337,7 +335,7 @@ export class AIAnalysisService {
       select: { organizationId: true },
     });
 
-    const response = await this.aiService.callAI(process!.organizationId, prompt);
+    const response = await AIService.callAI(process!.organizationId, prompt);
 
     // Parse and return understanding
     try {
@@ -420,7 +418,7 @@ Return your analysis as a JSON object with these fields:
       select: { organizationId: true },
     });
 
-    const response = await this.aiService.callAI(process!.organizationId, prompt);
+    const response = await AIService.callAI(process!.organizationId, prompt);
 
     // Parse and validate AI response
     const detectedPainPoints = this.parsePainPoints(response);
@@ -557,7 +555,7 @@ Example: [{"category": "BOTTLENECK", "severity": "HIGH", "title": "...", ...}]`;
       select: { organizationId: true },
     });
 
-    const response = await this.aiService.callAI(process!.organizationId, prompt);
+    const response = await AIService.callAI(process!.organizationId, prompt);
 
     const recommendations = this.parseRecommendations(response);
 
@@ -689,7 +687,7 @@ Example: [{"category": "QUICK_WIN", "priority": "HIGH", "title": "...", ...}]`;
       select: { organizationId: true },
     });
 
-    const response = await this.aiService.callAI(process!.organizationId, prompt);
+    const response = await AIService.callAI(process!.organizationId, prompt);
 
     return this.parseGeneratedProcess(response, context);
   }

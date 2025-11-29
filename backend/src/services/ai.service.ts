@@ -93,7 +93,7 @@ export class AIService {
   /**
    * Call AI provider with a prompt and get JSON response
    */
-  private static async callAI(
+  public static async callAI(
     organizationId: string,
     prompt: string
   ): Promise<any> {
