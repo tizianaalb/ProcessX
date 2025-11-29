@@ -284,6 +284,7 @@ model AIAnalysis {
   processId           String    @map("process_id")
   analysisType        String    // FULL, PAIN_POINTS, RECOMMENDATIONS, TO_BE
   status              String    // PENDING, IN_PROGRESS, COMPLETED, FAILED
+  progressStep        String?   @map("progress_step") // Current step: gathering, understanding, pain_points, recommendations, to_be
 
   // Results
   understanding       Json?     // Process understanding

@@ -191,6 +191,7 @@ export interface AIAnalysis {
   processId: string;
   analysisType: 'FULL' | 'PAIN_POINTS' | 'RECOMMENDATIONS' | 'TO_BE';
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  progressStep?: 'gathering' | 'understanding' | 'pain_points' | 'recommendations' | 'to_be';
   understanding?: any;
   detectedPainPoints?: any[];
   recommendations?: any[];
@@ -461,6 +462,15 @@ class ApiClient {
       `/api/processes/${processId}/analyses`,
       {
         method: 'GET',
+      }
+    );
+  }
+
+  async deleteAnalysis(analysisId: string): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(
+      `/api/analyses/${analysisId}`,
+      {
+        method: 'DELETE',
       }
     );
   }

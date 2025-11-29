@@ -11,6 +11,7 @@ import {
   Lightbulb,
   ArrowLeft,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { AIAnalysis, Process } from '../lib/api';
@@ -29,6 +30,8 @@ export const ProcessAnalyze = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<AnalysisType>('FULL');
   const [pollingAnalysisId, setPollingAnalysisId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedAnalysisId, setExpandedAnalysisId] = useState<string | null>(null);
 
   useEffect(() => {
     if (processId) {
@@ -97,6 +100,26 @@ export const ProcessAnalyze = () => {
       setError(err.message || 'Failed to start analysis');
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleDeleteAnalysis = async (analysisId: string) => {
+    if (!confirm('Are you sure you want to delete this analysis? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingId(analysisId);
+      setError(null);
+
+      await api.deleteAnalysis(analysisId);
+
+      // Reload analyses to remove the deleted one
+      await loadAnalyses();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete analysis');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -347,68 +370,201 @@ export const ProcessAnalyze = () => {
                         </p>
                       </div>
                     </div>
-                    <span
-                      className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
-                        analysis.status
-                      )}`}
-                    >
-                      {analysis.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(
+                          analysis.status
+                        )}`}
+                      >
+                        {analysis.status}
+                      </span>
+                      <Button
+                        onClick={() => handleDeleteAnalysis(analysis.id)}
+                        variant="outline"
+                        size="sm"
+                        disabled={deletingId === analysis.id}
+                        className="text-red-600 hover:bg-red-50 border-red-200 hover:border-red-300"
+                      >
+                        {deletingId === analysis.id ? (
+                          <Loader className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Completed Analysis Results */}
                   {analysis.status === 'COMPLETED' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
-                      {analysis.detectedPainPoints && analysis.detectedPainPoints.length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="w-5 h-5 text-orange-600" />
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900">
-                              {analysis.detectedPainPoints.length} Pain Points
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
+                        {analysis.detectedPainPoints && analysis.detectedPainPoints.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5 text-orange-600" />
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">
+                                {analysis.detectedPainPoints.length} Pain Points
+                              </div>
+                              <div className="text-xs text-gray-600">Detected</div>
                             </div>
-                            <div className="text-xs text-gray-600">Detected</div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {analysis.processRecommendations && analysis.processRecommendations.length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <Lightbulb className="w-5 h-5 text-blue-600" />
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900">
-                              {analysis.processRecommendations.length} Recommendations
+                        {analysis.processRecommendations && analysis.processRecommendations.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Lightbulb className="w-5 h-5 text-blue-600" />
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">
+                                {analysis.processRecommendations.length} Recommendations
+                              </div>
+                              <div className="text-xs text-gray-600">Generated</div>
                             </div>
-                            <div className="text-xs text-gray-600">Generated</div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {analysis.generatedProcess && (
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="w-5 h-5 text-green-600" />
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900">
-                              TO-BE Process
+                        {analysis.generatedProcess && (
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-green-600" />
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">
+                                TO-BE Process
+                              </div>
+                              <div className="text-xs text-gray-600">Generated</div>
                             </div>
-                            <div className="text-xs text-gray-600">Generated</div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {analysis.aiProvider && (
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-5 h-5 text-purple-600" />
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900">
-                              {analysis.aiProvider}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              {analysis.tokensUsed ? `${analysis.tokensUsed.toLocaleString()} tokens` : 'Provider'}
+                        {analysis.aiProvider && (
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-purple-600" />
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">
+                                {analysis.aiProvider}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {analysis.tokensUsed ? `${analysis.tokensUsed.toLocaleString()} tokens` : 'Provider'}
+                              </div>
                             </div>
                           </div>
+                        )}
+                      </div>
+
+                      {/* View Details Button */}
+                      <div className="mt-4">
+                        <Button
+                          onClick={() => setExpandedAnalysisId(expandedAnalysisId === analysis.id ? null : analysis.id)}
+                          variant="outline"
+                          className="w-full text-sm"
+                        >
+                          {expandedAnalysisId === analysis.id ? 'Hide Details' : 'View Details'}
+                        </Button>
+                      </div>
+
+                      {/* Detailed Results */}
+                      {expandedAnalysisId === analysis.id && (
+                        <div className="mt-4 space-y-6">
+                          {/* Pain Points Details */}
+                          {analysis.detectedPainPoints && analysis.detectedPainPoints.length > 0 && (
+                            <div className="border-t pt-4">
+                              <h4 className="text-md font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 text-orange-600" />
+                                Detected Pain Points
+                              </h4>
+                              <div className="space-y-3">
+                                {analysis.detectedPainPoints.map((painPoint: any, idx: number) => (
+                                  <div key={idx} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <h5 className="font-medium text-gray-900">{painPoint.title}</h5>
+                                      <span className={`px-2 py-0.5 text-xs rounded ${
+                                        painPoint.severity === 'CRITICAL' ? 'bg-red-100 text-red-800' :
+                                        painPoint.severity === 'HIGH' ? 'bg-orange-100 text-orange-800' :
+                                        painPoint.severity === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-blue-100 text-blue-800'
+                                      }`}>
+                                        {painPoint.severity}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 mb-2">{painPoint.description}</p>
+                                    {painPoint.impact && (
+                                      <p className="text-sm text-gray-600">
+                                        <strong>Impact:</strong> {painPoint.impact}
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Recommendations Details */}
+                          {analysis.recommendations && analysis.recommendations.length > 0 && (
+                            <div className="border-t pt-4">
+                              <h4 className="text-md font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <Lightbulb className="w-5 h-5 text-blue-600" />
+                                Recommendations
+                              </h4>
+                              <div className="space-y-3">
+                                {analysis.recommendations.map((rec: any, idx: number) => (
+                                  <div key={idx} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <h5 className="font-medium text-gray-900">{rec.title}</h5>
+                                      <span className={`px-2 py-0.5 text-xs rounded ${
+                                        rec.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                        rec.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-green-100 text-green-800'
+                                      }`}>
+                                        {rec.priority}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 mb-2">{rec.description}</p>
+                                    {rec.expectedBenefits && rec.expectedBenefits.length > 0 && (
+                                      <div className="mt-2">
+                                        <p className="text-xs font-medium text-gray-700 mb-1">Expected Benefits:</p>
+                                        <ul className="text-xs text-gray-600 list-disc list-inside">
+                                          {rec.expectedBenefits.map((benefit: string, bidx: number) => (
+                                            <li key={bidx}>{benefit}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* TO-BE Process Details */}
+                          {analysis.generatedProcess && (
+                            <div className="border-t pt-4">
+                              <h4 className="text-md font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-green-600" />
+                                TO-BE Process
+                              </h4>
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h5 className="font-medium text-gray-900 mb-2">{analysis.generatedProcess.name}</h5>
+                                <p className="text-sm text-gray-700 mb-3">{analysis.generatedProcess.description}</p>
+                                {analysis.generatedProcess.summary && (
+                                  <div className="mb-3">
+                                    <p className="text-xs font-medium text-gray-700 mb-1">Summary:</p>
+                                    <p className="text-sm text-gray-600">{analysis.generatedProcess.summary}</p>
+                                  </div>
+                                )}
+                                {analysis.generatedProcess.expectedImprovements && (
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-700 mb-1">Expected Improvements:</p>
+                                    <ul className="text-sm text-gray-600 list-disc list-inside">
+                                      {analysis.generatedProcess.expectedImprovements.map((imp: string, iidx: number) => (
+                                        <li key={iidx}>{imp}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
 
                   {/* Failed Analysis Error */}
@@ -425,11 +581,81 @@ export const ProcessAnalyze = () => {
                   {/* In Progress */}
                   {analysis.status === 'IN_PROGRESS' && (
                     <div className="mt-4 pt-4 border-t">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-sm text-blue-800 flex items-center gap-2">
-                          <Loader className="w-4 h-4 animate-spin" />
-                          Analysis in progress... This may take a few minutes.
-                        </p>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-sm font-medium text-blue-900 mb-3">Analysis in progress...</p>
+                        <div className="space-y-2">
+                          {/* Gathering */}
+                          <div className="flex items-center gap-2 text-sm">
+                            {analysis.progressStep === 'gathering' ? (
+                              <Loader className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
+                            ) : (
+                              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                            )}
+                            <span className={analysis.progressStep === 'gathering' ? 'text-blue-800 font-medium' : 'text-gray-600'}>
+                              Gathering process context
+                            </span>
+                          </div>
+
+                          {/* Understanding */}
+                          <div className="flex items-center gap-2 text-sm">
+                            {analysis.progressStep === 'understanding' ? (
+                              <Loader className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
+                            ) : (analysis.progressStep && ['pain_points', 'recommendations', 'to_be'].includes(analysis.progressStep)) ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            )}
+                            <span className={analysis.progressStep === 'understanding' ? 'text-blue-800 font-medium' : (analysis.progressStep && ['pain_points', 'recommendations', 'to_be'].includes(analysis.progressStep)) ? 'text-gray-600' : 'text-gray-400'}>
+                              Analyzing process understanding
+                            </span>
+                          </div>
+
+                          {/* Pain Points */}
+                          {(analysis.analysisType === 'FULL' || analysis.analysisType === 'PAIN_POINTS') && (
+                            <div className="flex items-center gap-2 text-sm">
+                              {analysis.progressStep === 'pain_points' ? (
+                                <Loader className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
+                              ) : (analysis.progressStep && ['recommendations', 'to_be'].includes(analysis.progressStep)) ? (
+                                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                              ) : (
+                                <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              )}
+                              <span className={analysis.progressStep === 'pain_points' ? 'text-blue-800 font-medium' : (analysis.progressStep && ['recommendations', 'to_be'].includes(analysis.progressStep)) ? 'text-gray-600' : 'text-gray-400'}>
+                                Detecting pain points
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Recommendations */}
+                          {(analysis.analysisType === 'FULL' || analysis.analysisType === 'RECOMMENDATIONS') && (
+                            <div className="flex items-center gap-2 text-sm">
+                              {analysis.progressStep === 'recommendations' ? (
+                                <Loader className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
+                              ) : (analysis.progressStep === 'to_be') ? (
+                                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                              ) : (
+                                <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              )}
+                              <span className={analysis.progressStep === 'recommendations' ? 'text-blue-800 font-medium' : (analysis.progressStep === 'to_be') ? 'text-gray-600' : 'text-gray-400'}>
+                                Generating recommendations
+                              </span>
+                            </div>
+                          )}
+
+                          {/* TO-BE Process */}
+                          {(analysis.analysisType === 'FULL' || analysis.analysisType === 'TO_BE') && (
+                            <div className="flex items-center gap-2 text-sm">
+                              {analysis.progressStep === 'to_be' ? (
+                                <Loader className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
+                              ) : (
+                                <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                              )}
+                              <span className={analysis.progressStep === 'to_be' ? 'text-blue-800 font-medium' : 'text-gray-400'}>
+                                Creating TO-BE process
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

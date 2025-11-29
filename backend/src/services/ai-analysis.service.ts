@@ -188,13 +188,19 @@ export class AIAnalysisService {
     // Update status to IN_PROGRESS
     await prisma.aIAnalysis.update({
       where: { id: analysisId },
-      data: { status: 'IN_PROGRESS' },
+      data: { status: 'IN_PROGRESS', progressStep: 'gathering' },
     });
 
     console.log(`📈 [${analysisId}] Gathering process context...`);
     // 1. Gather complete context
     const context = await this.gatherProcessContext(processId);
     console.log(`📈 [${analysisId}] Context gathered: ${context.process.steps.length} steps`);
+
+    // Update progress to understanding
+    await prisma.aIAnalysis.update({
+      where: { id: analysisId },
+      data: { progressStep: 'understanding' },
+    });
 
     console.log(`📈 [${analysisId}] Analyzing process understanding...`);
     // 2. Understand process
@@ -204,6 +210,10 @@ export class AIAnalysisService {
     // 3. Detect pain points (if requested)
     let painPoints: DetectedPainPoint[] = [];
     if (analysisType === 'FULL' || analysisType === 'PAIN_POINTS') {
+      await prisma.aIAnalysis.update({
+        where: { id: analysisId },
+        data: { progressStep: 'pain_points' },
+      });
       console.log(`📈 [${analysisId}] Detecting pain points...`);
       painPoints = await this.detectPainPoints(context);
       console.log(`📈 [${analysisId}] Detected ${painPoints.length} pain points`);
@@ -212,6 +222,10 @@ export class AIAnalysisService {
     // 4. Generate recommendations (if requested)
     let recommendations: ProcessRecommendation[] = [];
     if (analysisType === 'FULL' || analysisType === 'RECOMMENDATIONS') {
+      await prisma.aIAnalysis.update({
+        where: { id: analysisId },
+        data: { progressStep: 'recommendations' },
+      });
       console.log(`📈 [${analysisId}] Generating recommendations...`);
       recommendations = await this.generateRecommendations(context, painPoints);
       console.log(`📈 [${analysisId}] Generated ${recommendations.length} recommendations`);
@@ -220,6 +234,10 @@ export class AIAnalysisService {
     // 5. Create TO-BE process (if requested)
     let toBeProcess: GeneratedProcess | null = null;
     if (analysisType === 'FULL' || analysisType === 'TO_BE') {
+      await prisma.aIAnalysis.update({
+        where: { id: analysisId },
+        data: { progressStep: 'to_be' },
+      });
       console.log(`📈 [${analysisId}] Generating TO-BE process...`);
       toBeProcess = await this.generateToBeProcess(context, recommendations);
       console.log(`📈 [${analysisId}] TO-BE process ${toBeProcess ? 'generated' : 'skipped'}`);
@@ -258,12 +276,19 @@ export class AIAnalysisService {
         // Map step order/number to actual step UUID
         let actualStepId: string | undefined;
         if (painPoint.processStepId) {
+          let stepId = painPoint.processStepId;
+
+          // Handle array of step IDs (take the first one)
+          if (Array.isArray(stepId)) {
+            stepId = stepId[0];
+          }
+
           // If it's a number, treat it as step order
-          if (typeof painPoint.processStepId === 'number') {
-            actualStepId = stepOrderToIdMap.get(painPoint.processStepId);
-          } else {
+          if (typeof stepId === 'number') {
+            actualStepId = stepOrderToIdMap.get(stepId);
+          } else if (typeof stepId === 'string') {
             // If it's already a string UUID, use it directly
-            actualStepId = painPoint.processStepId;
+            actualStepId = stepId;
           }
         }
 
