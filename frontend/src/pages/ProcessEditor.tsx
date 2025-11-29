@@ -47,7 +47,7 @@ import { PainPointList } from '../components/PainPointList';
 import { ContextMenu, getNodeContextMenuItems, getEdgeContextMenuItems } from '../components/ContextMenu';
 import { NodePropertiesPanel } from '../components/NodePropertiesPanel';
 import { NodePalette } from '../components/NodePalette';
-import { AIAnalysisPanel } from '../components/AIAnalysisPanel';
+import { AIAnalysisPanel, AIAnalysisPanelToggle } from '../components/AIAnalysisPanel';
 
 const nodeTypes = {
   start: StartNode,
@@ -820,10 +820,13 @@ const ProcessEditorInner = () => {
 
           {/* AI Analysis Panel */}
           {process && (
-            <AIAnalysisPanel
-              processId={process.id}
-              onAnalysisComplete={loadPainPoints}
-            />
+            <>
+              <AIAnalysisPanel
+                processId={process.id}
+                onAnalysisComplete={loadPainPoints}
+              />
+              <AIAnalysisPanelToggle />
+            </>
           )}
 
           {/* Node Properties Panel */}
