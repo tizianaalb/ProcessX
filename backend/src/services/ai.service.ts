@@ -48,13 +48,27 @@ export class AIService {
    * Get the default AI configuration for an organization
    */
   private static async getAIConfig(organizationId: string): Promise<AIProviderConfig> {
-    const config = await prisma.aPIConfiguration.findFirst({
+    // First, try to find a configuration marked as default
+    let config = await prisma.aPIConfiguration.findFirst({
       where: {
         organizationId,
         isActive: true,
         isDefault: true,
       },
     });
+
+    // If no default, fallback to any active provider
+    if (!config) {
+      config = await prisma.aPIConfiguration.findFirst({
+        where: {
+          organizationId,
+          isActive: true,
+        },
+        orderBy: {
+          createdAt: 'asc', // Use the oldest (first created) provider
+        },
+      });
+    }
 
     if (!config) {
       // Fallback to environment variable if no config exists
