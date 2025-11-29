@@ -8,6 +8,8 @@ import ReactFlow, {
   addEdge,
   BackgroundVariant,
   MiniMap,
+  useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings, Sparkles, Lightbulb } from 'lucide-react';
@@ -67,9 +69,10 @@ const nodeTypes = {
   group: GroupNode,
 };
 
-export const ProcessEditor = () => {
+const ProcessEditorInner = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const reactFlowInstance = useReactFlow();
   const [process, setProcess] = useState<Process | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -319,14 +322,15 @@ export const ProcessEditor = () => {
     const type = event.dataTransfer.getData('application/reactflow');
     if (!type) return;
 
-    const reactFlowBounds = event.currentTarget.getBoundingClientRect();
-    const position = {
-      x: event.clientX - reactFlowBounds.left,
-      y: event.clientY - reactFlowBounds.top,
-    };
+    // Get the exact position where the mouse dropped the component
+    // project() converts screen coordinates to flow coordinates (accounts for zoom/pan)
+    const position = reactFlowInstance.project({
+      x: event.clientX,
+      y: event.clientY,
+    });
 
     addNodeAtPosition(type as any, position);
-  }, []);
+  }, [reactFlowInstance]);
 
   const addNodeAtPosition = (type: 'start' | 'task' | 'decision' | 'end' | 'parallelGateway' | 'subprocess' | 'userTask' | 'systemTask' | 'timer' | 'annotation' | 'inclusiveGateway' | 'eventGateway' | 'messageEvent' | 'errorEvent' | 'signalEvent' | 'dataObject' | 'group', position: { x: number; y: number }) => {
     // Generate friendly labels for new node types
@@ -956,5 +960,14 @@ export const ProcessEditor = () => {
       />
 
     </div>
+  );
+};
+
+// Wrap with ReactFlowProvider to enable useReactFlow hook
+export const ProcessEditor = () => {
+  return (
+    <ReactFlowProvider>
+      <ProcessEditorInner />
+    </ReactFlowProvider>
   );
 };
