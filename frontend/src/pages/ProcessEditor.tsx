@@ -540,6 +540,19 @@ const ProcessEditorInner = () => {
         await api.updateProcessSteps(process.id, modifiedSteps as any);
       }
 
+      // Detect and delete removed nodes
+      const deletedNodeIds = process.steps
+        ?.filter((step) => !nodes.find((node) => node.id === step.id))
+        .map((step) => step.id) || [];
+
+      for (const nodeId of deletedNodeIds) {
+        try {
+          await api.deleteProcessStep(nodeId);
+        } catch (error) {
+          console.error(`Failed to delete node ${nodeId}:`, error);
+        }
+      }
+
       // Convert edges back to connections
       // Filter out connections with unsaved nodes (temporary IDs starting with "node-")
       const newConnections: ProcessConnectionInput[] = edges
@@ -554,6 +567,19 @@ const ProcessEditorInner = () => {
 
       if (newConnections.length > 0) {
         await api.addProcessConnections(process.id, newConnections);
+      }
+
+      // Detect and delete removed connections
+      const deletedConnectionIds = process.connections
+        ?.filter((conn) => !edges.find((edge) => edge.id === conn.id))
+        .map((conn) => conn.id) || [];
+
+      for (const connId of deletedConnectionIds) {
+        try {
+          await api.deleteProcessConnection(connId);
+        } catch (error) {
+          console.error(`Failed to delete connection ${connId}:`, error);
+        }
       }
 
       alert('Process saved successfully!');

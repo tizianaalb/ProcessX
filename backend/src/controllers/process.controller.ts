@@ -422,3 +422,79 @@ export const addProcessConnections = async (req: Request, res: Response): Promis
     res.status(500).json({ error: 'Failed to add process connections' });
   }
 };
+
+// Delete a process step
+export const deleteProcessStep = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id: stepId } = req.params;
+    const organizationId = req.user!.organizationId;
+
+    // Find the step and verify it belongs to a process in the user's organization
+    const step = await prisma.processStep.findUnique({
+      where: { id: stepId },
+      include: {
+        process: {
+          select: { organizationId: true },
+        },
+      },
+    });
+
+    if (!step) {
+      res.status(404).json({ error: 'Process step not found' });
+      return;
+    }
+
+    if (step.process.organizationId !== organizationId) {
+      res.status(403).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    // Delete the step (cascade will delete related connections)
+    await prisma.processStep.delete({
+      where: { id: stepId },
+    });
+
+    res.json({ message: 'Process step deleted successfully' });
+  } catch (error) {
+    console.error('Delete process step error:', error);
+    res.status(500).json({ error: 'Failed to delete process step' });
+  }
+};
+
+// Delete a process connection
+export const deleteProcessConnection = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id: connectionId } = req.params;
+    const organizationId = req.user!.organizationId;
+
+    // Find the connection and verify it belongs to a process in the user's organization
+    const connection = await prisma.processConnection.findUnique({
+      where: { id: connectionId },
+      include: {
+        process: {
+          select: { organizationId: true },
+        },
+      },
+    });
+
+    if (!connection) {
+      res.status(404).json({ error: 'Process connection not found' });
+      return;
+    }
+
+    if (connection.process.organizationId !== organizationId) {
+      res.status(403).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    // Delete the connection
+    await prisma.processConnection.delete({
+      where: { id: connectionId },
+    });
+
+    res.json({ message: 'Process connection deleted successfully' });
+  } catch (error) {
+    console.error('Delete process connection error:', error);
+    res.status(500).json({ error: 'Failed to delete process connection' });
+  }
+};

@@ -386,6 +386,18 @@ class ApiClient {
     );
   }
 
+  async deleteProcessStep(stepId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/steps/${stepId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async deleteProcessConnection(connectionId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/connections/${connectionId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Pain Point endpoints
   async getPainPoints(processId: string): Promise<{ painPoints: PainPoint[] }> {
     return this.request<{ painPoints: PainPoint[] }>(

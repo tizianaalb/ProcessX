@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
-import processRoutes from './routes/process.routes.js';
+import processRoutes, { stepRouter, connectionRouter } from './routes/process.routes.js';
 import painPointRoutes from './routes/painpoint.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
@@ -47,6 +47,8 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/processes', processRoutes);
+app.use('/api/steps', stepRouter);
+app.use('/api/connections', connectionRouter);
 app.use('/api', painPointRoutes);
 app.use('/api', recommendationRoutes);
 app.use('/api/settings', settingsRoutes);

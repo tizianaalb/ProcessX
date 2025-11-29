@@ -8,6 +8,8 @@ import {
   addProcessSteps,
   updateProcessSteps,
   addProcessConnections,
+  deleteProcessStep,
+  deleteProcessConnection,
 } from '../controllers/process.controller.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -28,4 +30,14 @@ router.post('/:id/steps', addProcessSteps);
 router.put('/:id/steps', updateProcessSteps);
 router.post('/:id/connections', addProcessConnections);
 
+// Create step and connection routes
+const stepRouter = Router();
+stepRouter.use(authenticate);
+stepRouter.delete('/:id', deleteProcessStep);
+
+const connectionRouter = Router();
+connectionRouter.use(authenticate);
+connectionRouter.delete('/:id', deleteProcessConnection);
+
 export default router;
+export { stepRouter, connectionRouter };
