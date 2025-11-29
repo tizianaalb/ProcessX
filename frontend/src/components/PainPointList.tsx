@@ -287,7 +287,7 @@ export const PainPointList = ({
           const severityConfig = SEVERITY_COLORS[painPoint.severity];
           const statusConfig = STATUS_CONFIG[painPoint.status];
           const StatusIcon = statusConfig.icon;
-          const categoryInfo = CATEGORY_LABELS[painPoint.category];
+          const categoryInfo = CATEGORY_LABELS[painPoint.category] || { label: painPoint.category, icon: '📋' };
 
           return (
             <div
