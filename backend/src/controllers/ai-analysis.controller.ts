@@ -15,6 +15,13 @@ export const startAnalysis = async (req: Request, res: Response) => {
     const { analysisType = 'FULL' } = req.body;
     const user = (req as any).user;
 
+    console.log('🔍 Starting AI analysis:', {
+      processId,
+      analysisType,
+      userId: user.id,
+      organizationId: user.organizationId,
+    });
+
     // Verify process exists and user has access
     const process = await prisma.process.findFirst({
       where: {
@@ -24,11 +31,14 @@ export const startAnalysis = async (req: Request, res: Response) => {
     });
 
     if (!process) {
+      console.log('❌ Process not found:', processId);
       return res.status(404).json({
         success: false,
         message: 'Process not found',
       });
     }
+
+    console.log('✅ Process found, starting analysis...');
 
     // Start analysis
     const analysisId = await aiAnalysisService.analyzeProcess(
@@ -37,13 +47,16 @@ export const startAnalysis = async (req: Request, res: Response) => {
       analysisType
     );
 
+    console.log('✅ Analysis started successfully:', analysisId);
+
     res.json({
       success: true,
       message: 'Analysis started',
       analysisId,
     });
   } catch (error: any) {
-    console.error('Error starting analysis:', error);
+    console.error('❌ Error starting analysis:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to start analysis',

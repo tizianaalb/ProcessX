@@ -94,6 +94,8 @@ export class AIAnalysisService {
     userId: string,
     analysisType: 'FULL' | 'PAIN_POINTS' | 'RECOMMENDATIONS' | 'TO_BE' = 'FULL'
   ): Promise<string> {
+    console.log('📊 Creating analysis record...');
+
     // Create analysis record
     const analysis = await prisma.aIAnalysis.create({
       data: {
@@ -105,10 +107,14 @@ export class AIAnalysisService {
       },
     });
 
+    console.log('✅ Analysis record created:', analysis.id);
+    console.log('🚀 Starting background analysis...');
+
     // Start analysis in background (in production, use queue/job system)
-    this.performAnalysis(analysis.id, processId, analysisType).catch((error) => {
-      console.error('Analysis failed:', error);
-      prisma.aIAnalysis.update({
+    this.performAnalysis(analysis.id, processId, analysisType).catch(async (error) => {
+      console.error('❌ Analysis failed:', error);
+      console.error('Error stack:', error.stack);
+      await prisma.aIAnalysis.update({
         where: { id: analysis.id },
         data: {
           status: 'FAILED',
@@ -128,37 +134,50 @@ export class AIAnalysisService {
     processId: string,
     analysisType: string
   ): Promise<void> {
+    console.log(`📈 [${analysisId}] Updating status to IN_PROGRESS...`);
+
     // Update status to IN_PROGRESS
     await prisma.aIAnalysis.update({
       where: { id: analysisId },
       data: { status: 'IN_PROGRESS' },
     });
 
+    console.log(`📈 [${analysisId}] Gathering process context...`);
     // 1. Gather complete context
     const context = await this.gatherProcessContext(processId);
+    console.log(`📈 [${analysisId}] Context gathered: ${context.process.steps.length} steps`);
 
+    console.log(`📈 [${analysisId}] Analyzing process understanding...`);
     // 2. Understand process
     const understanding = await this.analyzeProcessUnderstanding(context);
+    console.log(`📈 [${analysisId}] Process understanding complete`);
 
     // 3. Detect pain points (if requested)
     let painPoints: DetectedPainPoint[] = [];
     if (analysisType === 'FULL' || analysisType === 'PAIN_POINTS') {
+      console.log(`📈 [${analysisId}] Detecting pain points...`);
       painPoints = await this.detectPainPoints(context);
+      console.log(`📈 [${analysisId}] Detected ${painPoints.length} pain points`);
     }
 
     // 4. Generate recommendations (if requested)
     let recommendations: ProcessRecommendation[] = [];
     if (analysisType === 'FULL' || analysisType === 'RECOMMENDATIONS') {
+      console.log(`📈 [${analysisId}] Generating recommendations...`);
       recommendations = await this.generateRecommendations(context, painPoints);
+      console.log(`📈 [${analysisId}] Generated ${recommendations.length} recommendations`);
     }
 
     // 5. Create TO-BE process (if requested)
     let toBeProcess: GeneratedProcess | null = null;
     if (analysisType === 'FULL' || analysisType === 'TO_BE') {
+      console.log(`📈 [${analysisId}] Generating TO-BE process...`);
       toBeProcess = await this.generateToBeProcess(context, recommendations);
+      console.log(`📈 [${analysisId}] TO-BE process ${toBeProcess ? 'generated' : 'skipped'}`);
     }
 
     // Save results
+    console.log(`📈 [${analysisId}] Saving analysis results...`);
     await prisma.aIAnalysis.update({
       where: { id: analysisId },
       data: {
@@ -170,6 +189,7 @@ export class AIAnalysisService {
         completedAt: new Date(),
       },
     });
+    console.log(`✅ [${analysisId}] Analysis completed successfully!`);
 
     // Save pain points to database
     if (painPoints.length > 0) {
