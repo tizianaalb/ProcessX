@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Sparkles, AlertCircle, CheckCircle } from 'lucide-react';
 import { api, GeneratedProcessPreview } from '../lib/api';
-import Button from './Button';
+import { Button } from './ui/button';
 
 interface ProcessGenerationModalProps {
   isOpen: boolean;
