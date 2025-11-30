@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Home, Settings, Sparkles } from 'lucide-react';
+import { Home, Settings, Sparkles, FileText } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Process } from '../lib/api';
 import { Button } from '../components/ui/button';
 import ProcessGenerationModal from '../components/ProcessGenerationModal';
+import TemplateGallery from '../components/TemplateGallery';
 
 export const ProcessList = () => {
   const [processes, setProcesses] = useState<Process[]>([]);
@@ -13,6 +14,7 @@ export const ProcessList = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isGenerationModalOpen, setIsGenerationModalOpen] = useState(false);
+  const [isTemplateGalleryOpen, setIsTemplateGalleryOpen] = useState(false);
 
   const [filters, setFilters] = useState<{
     status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
@@ -125,6 +127,13 @@ export const ProcessList = () => {
               </p>
             </div>
             <div className="flex gap-3">
+              <Button
+                onClick={() => setIsTemplateGalleryOpen(true)}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white flex items-center gap-2"
+              >
+                <FileText size={16} />
+                Browse Templates
+              </Button>
               <Button
                 onClick={() => setIsGenerationModalOpen(true)}
                 className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white flex items-center gap-2"
@@ -292,6 +301,16 @@ export const ProcessList = () => {
           </div>
         )}
       </div>
+
+      {/* Template Gallery Modal */}
+      <TemplateGallery
+        isOpen={isTemplateGalleryOpen}
+        onClose={() => setIsTemplateGalleryOpen(false)}
+        onSuccess={() => {
+          setIsTemplateGalleryOpen(false);
+          loadProcesses();
+        }}
+      />
 
       {/* AI Process Generation Modal */}
       <ProcessGenerationModal

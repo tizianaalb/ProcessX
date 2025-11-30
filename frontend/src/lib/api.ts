@@ -289,6 +289,34 @@ export interface GeneratedProcessPreview {
   }>;
 }
 
+// Template interfaces
+export interface ProcessTemplate {
+  id: string;
+  organizationId?: string;
+  name: string;
+  description?: string;
+  category?: string;
+  industrySector: string;
+  templateData: {
+    steps: Array<any>;
+    connections: Array<any>;
+  };
+  previewImageUrl?: string;
+  isPublic: boolean;
+  usageCount: number;
+  createdAt: string;
+  updatedAt: string;
+  organization?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface UseTemplateData {
+  name?: string;
+  description?: string;
+}
+
 class ApiClient {
   private baseURL: string;
 
@@ -571,6 +599,40 @@ class ApiClient {
   ): Promise<{ success: boolean; message: string; preview?: GeneratedProcessPreview; process?: Process }> {
     return this.request<{ success: boolean; message: string; preview?: GeneratedProcessPreview; process?: Process }>(
       '/api/processes/generate-from-description',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  // Template endpoints
+  async getTemplates(params?: { category?: string; industrySector?: string }): Promise<{ success: boolean; templates: ProcessTemplate[] }> {
+    const queryParams = new URLSearchParams();
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.industrySector) queryParams.append('industrySector', params.industrySector);
+
+    const queryString = queryParams.toString();
+    return this.request<{ success: boolean; templates: ProcessTemplate[] }>(
+      `/api/templates${queryString ? `?${queryString}` : ''}`,
+      {
+        method: 'GET',
+      }
+    );
+  }
+
+  async getTemplate(id: string): Promise<{ success: boolean; template: ProcessTemplate }> {
+    return this.request<{ success: boolean; template: ProcessTemplate }>(
+      `/api/templates/${id}`,
+      {
+        method: 'GET',
+      }
+    );
+  }
+
+  async useTemplate(id: string, data: UseTemplateData = {}): Promise<{ success: boolean; message: string; process: Process }> {
+    return this.request<{ success: boolean; message: string; process: Process }>(
+      `/api/templates/${id}/use`,
       {
         method: 'POST',
         body: JSON.stringify(data),
