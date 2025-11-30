@@ -619,49 +619,25 @@ const ProcessEditorInner = () => {
     }
   };
 
-  const handleFitView = () => {
+  const handleFitView = (e?: React.MouseEvent) => {
+    // Prevent any default behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (reactFlowInstance && nodes.length > 0) {
       console.log('FitView button clicked, nodes:', nodes.length);
-      console.log('Current viewport:', reactFlowInstance.getViewport());
 
-      // Get the current nodes to check their positions
-      const nodePositions = nodes.map(n => ({ id: n.id, x: n.position.x, y: n.position.y }));
-      console.log('Node positions:', nodePositions);
-
-      // Calculate bounding box of all nodes
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      nodes.forEach(node => {
-        const x = node.position.x;
-        const y = node.position.y;
-        const width = 200; // Approximate node width
-        const height = 100; // Approximate node height
-
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + width);
-        maxY = Math.max(maxY, y + height);
-      });
-
-      console.log('Calculated bounds:', { minX, minY, maxX, maxY });
-
-      // Try to fit view with proper options to ensure all nodes are visible
+      // Call fitView without duration for instant effect
       try {
-        // First try: Reset zoom and use setViewport
-        reactFlowInstance.setViewport({ x: 0, y: 0, zoom: 1 });
-
-        // Then use fitView with all nodes option
-        setTimeout(() => {
-          reactFlowInstance.fitView({
-            padding: 0.15,
-            includeHiddenNodes: false,
-            nodes: nodes,
-            minZoom: 0.1,
-            maxZoom: 1.5,
-            duration: 500
-          });
-          console.log('FitView called successfully');
-          console.log('New viewport:', reactFlowInstance.getViewport());
-        }, 100);
+        reactFlowInstance.fitView({
+          padding: 0.2,
+          includeHiddenNodes: false,
+          minZoom: 0.1,
+          maxZoom: 1.5
+        });
+        console.log('FitView executed, new viewport:', reactFlowInstance.getViewport());
       } catch (error) {
         console.error('Error calling fitView:', error);
       }
@@ -832,7 +808,7 @@ const ProcessEditorInner = () => {
             Add Pain Point
           </Button>
           <Button
-            onClick={handleFitView}
+            onClick={(e) => handleFitView(e)}
             disabled={!process || nodes.length === 0}
             variant="outline"
             className="flex items-center gap-2"
