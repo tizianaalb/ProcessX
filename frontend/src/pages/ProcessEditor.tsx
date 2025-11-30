@@ -620,25 +620,33 @@ const ProcessEditorInner = () => {
   };
 
   const handleFitView = () => {
-    if (reactFlowInstance) {
+    if (reactFlowInstance && nodes.length > 0) {
       console.log('FitView button clicked, nodes:', nodes.length);
-      console.log('ReactFlow instance:', reactFlowInstance);
+      console.log('Current viewport:', reactFlowInstance.getViewport());
+
+      // Get the current nodes to check their positions
+      const nodePositions = nodes.map(n => ({ id: n.id, x: n.position.x, y: n.position.y }));
+      console.log('Node positions:', nodePositions);
 
       // Try to fit view with proper options to ensure all nodes are visible
       try {
-        reactFlowInstance.fitView({
-          padding: 0.2,
-          includeHiddenNodes: false,
-          minZoom: 0.1,
-          maxZoom: 2,
-          duration: 500
-        });
-        console.log('FitView called successfully');
+        // Use a small timeout to ensure DOM is updated
+        setTimeout(() => {
+          reactFlowInstance.fitView({
+            padding: 0.2,
+            includeHiddenNodes: false,
+            minZoom: 0.1,
+            maxZoom: 2,
+            duration: 800
+          });
+          console.log('FitView called successfully');
+          console.log('New viewport:', reactFlowInstance.getViewport());
+        }, 50);
       } catch (error) {
         console.error('Error calling fitView:', error);
       }
     } else {
-      console.warn('ReactFlow instance is not initialized');
+      console.warn('ReactFlow instance not ready or no nodes to fit. Nodes:', nodes.length);
     }
   };
 
