@@ -148,11 +148,53 @@ const ProcessEditorInner = () => {
       setNodes(flowNodes);
       setEdges(flowEdges);
 
-      // Initialize viewport to origin (0, 0) with zoom 1
+      // Calculate bounds and center viewport on all nodes
       setTimeout(() => {
         if (reactFlowInstance && flowNodes.length > 0) {
-          reactFlowInstance.setViewport({ x: 0, y: 0, zoom: 1 });
-          console.log('Viewport initialized to origin:', reactFlowInstance.getViewport());
+          // Calculate bounding box of all nodes
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          const nodeWidth = 200;  // Approximate node width
+          const nodeHeight = 100; // Approximate node height
+
+          flowNodes.forEach(node => {
+            const x = node.position.x;
+            const y = node.position.y;
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x + nodeWidth);
+            maxY = Math.max(maxY, y + nodeHeight);
+          });
+
+          const boundsWidth = maxX - minX;
+          const boundsHeight = maxY - minY;
+          const centerX = minX + boundsWidth / 2;
+          const centerY = minY + boundsHeight / 2;
+
+          console.log('Calculated bounds:', { minX, minY, maxX, maxY, boundsWidth, boundsHeight, centerX, centerY });
+
+          // Get the ReactFlow container dimensions
+          const rfElement = document.querySelector('.react-flow');
+          if (rfElement) {
+            const containerWidth = rfElement.clientWidth;
+            const containerHeight = rfElement.clientHeight;
+
+            // Calculate zoom to fit all nodes with padding
+            const padding = 50; // pixels of padding
+            const zoomX = (containerWidth - padding * 2) / boundsWidth;
+            const zoomY = (containerHeight - padding * 2) / boundsHeight;
+            const zoom = Math.min(zoomX, zoomY, 1.5); // Cap at 1.5x zoom
+
+            // Calculate viewport position to center the bounds
+            const x = containerWidth / 2 - centerX * zoom;
+            const y = containerHeight / 2 - centerY * zoom;
+
+            console.log('Setting viewport:', { x, y, zoom, containerWidth, containerHeight });
+            reactFlowInstance.setViewport({ x, y, zoom });
+            console.log('Viewport set to:', reactFlowInstance.getViewport());
+          } else {
+            // Fallback to origin if container not found
+            reactFlowInstance.setViewport({ x: 0, y: 0, zoom: 1 });
+          }
         }
       }, 100);
     } catch (error: any) {
@@ -622,11 +664,46 @@ const ProcessEditorInner = () => {
     }
 
     if (reactFlowInstance && nodes.length > 0) {
-      console.log('Resetting viewport to origin');
+      console.log('Fitting view to all nodes');
 
-      // Simply reset to origin view
-      reactFlowInstance.setViewport({ x: 0, y: 0, zoom: 1 });
-      console.log('Viewport reset to:', reactFlowInstance.getViewport());
+      // Calculate bounding box of all nodes
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      const nodeWidth = 200;
+      const nodeHeight = 100;
+
+      nodes.forEach(node => {
+        const x = node.position.x;
+        const y = node.position.y;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + nodeWidth);
+        maxY = Math.max(maxY, y + nodeHeight);
+      });
+
+      const boundsWidth = maxX - minX;
+      const boundsHeight = maxY - minY;
+      const centerX = minX + boundsWidth / 2;
+      const centerY = minY + boundsHeight / 2;
+
+      // Get the ReactFlow container dimensions
+      const rfElement = document.querySelector('.react-flow');
+      if (rfElement) {
+        const containerWidth = rfElement.clientWidth;
+        const containerHeight = rfElement.clientHeight;
+
+        // Calculate zoom to fit all nodes with padding
+        const padding = 50;
+        const zoomX = (containerWidth - padding * 2) / boundsWidth;
+        const zoomY = (containerHeight - padding * 2) / boundsHeight;
+        const zoom = Math.min(zoomX, zoomY, 1.5);
+
+        // Calculate viewport position to center the bounds
+        const x = containerWidth / 2 - centerX * zoom;
+        const y = containerHeight / 2 - centerY * zoom;
+
+        reactFlowInstance.setViewport({ x, y, zoom });
+        console.log('View fitted, viewport:', reactFlowInstance.getViewport());
+      }
     } else {
       console.warn('ReactFlow instance not ready or no nodes. Nodes:', nodes.length);
     }
