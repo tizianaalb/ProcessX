@@ -629,17 +629,42 @@ const ProcessEditorInner = () => {
     if (reactFlowInstance && nodes.length > 0) {
       console.log('FitView button clicked, nodes:', nodes.length);
 
-      // Call fitView without duration for instant effect
+      // Calculate bounding box manually
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+      nodes.forEach(node => {
+        const x = node.position.x;
+        const y = node.position.y;
+        // Estimate node dimensions
+        const width = 200;
+        const height = 100;
+
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + width);
+        maxY = Math.max(maxY, y + height);
+      });
+
+      console.log('Calculated bounds:', { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY });
+
       try {
-        reactFlowInstance.fitView({
-          padding: 0.2,
-          includeHiddenNodes: false,
-          minZoom: 0.1,
-          maxZoom: 1.5
-        });
-        console.log('FitView executed, new viewport:', reactFlowInstance.getViewport());
+        // Use fitBounds instead of fitView
+        reactFlowInstance.fitBounds(
+          {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+          },
+          {
+            padding: 0.2,
+            minZoom: 0.1,
+            maxZoom: 1.5
+          }
+        );
+        console.log('FitBounds executed, new viewport:', reactFlowInstance.getViewport());
       } catch (error) {
-        console.error('Error calling fitView:', error);
+        console.error('Error calling fitBounds:', error);
       }
     } else {
       console.warn('ReactFlow instance not ready or no nodes to fit. Nodes:', nodes.length);
