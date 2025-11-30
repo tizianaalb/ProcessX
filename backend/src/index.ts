@@ -10,6 +10,7 @@ import recommendationRoutes from './routes/recommendation.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import exportRoutes from './routes/export.routes.js';
 import aiAnalysisRoutes from './routes/ai-analysis.routes.js';
+import aiGenerationRoutes from './routes/ai-generation.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -54,6 +55,7 @@ app.use('/api', recommendationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api', exportRoutes);
 app.use('/api', aiAnalysisRoutes);
+app.use('/api/processes', aiGenerationRoutes);
 
 app.get('/api', (req, res) => {
   res.json({

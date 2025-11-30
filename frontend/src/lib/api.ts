@@ -257,6 +257,38 @@ export interface StartAnalysisData {
   analysisType?: 'FULL' | 'PAIN_POINTS' | 'RECOMMENDATIONS' | 'TO_BE';
 }
 
+// AI Process Generation interfaces
+export interface GenerateProcessData {
+  description: string;
+  processType?: 'AS_IS' | 'TO_BE';
+  industryContext?: string;
+  createImmediately?: boolean;
+}
+
+export interface GeneratedProcessPreview {
+  name: string;
+  description: string;
+  steps: Array<{
+    id: string;
+    name: string;
+    description: string;
+    type: 'START' | 'TASK' | 'DECISION' | 'END';
+    duration?: number;
+    position: { x: number; y: number };
+    metadata?: {
+      responsibleRole?: string;
+      department?: string;
+      requiredSystems?: string[];
+    };
+  }>;
+  connections: Array<{
+    sourceStepId: string;
+    targetStepId: string;
+    label?: string;
+    type: 'DEFAULT' | 'CONDITIONAL';
+  }>;
+}
+
 class ApiClient {
   private baseURL: string;
 
@@ -529,6 +561,19 @@ class ApiClient {
       `/api/recommendations/${recommendationId}/implement`,
       {
         method: 'POST',
+      }
+    );
+  }
+
+  // AI Process Generation endpoint
+  async generateProcessFromDescription(
+    data: GenerateProcessData
+  ): Promise<{ success: boolean; message: string; preview?: GeneratedProcessPreview; process?: Process }> {
+    return this.request<{ success: boolean; message: string; preview?: GeneratedProcessPreview; process?: Process }>(
+      '/api/processes/generate-from-description',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
       }
     );
   }

@@ -365,6 +365,109 @@ Return your recommendations in the following JSON format:
   }
 
   /**
+   * Generate a complete process from a natural language description
+   */
+  static async generateProcessFromDescription(
+    organizationId: string,
+    description: string,
+    processType: 'AS_IS' | 'TO_BE' = 'AS_IS',
+    industryContext: string = 'insurance'
+  ): Promise<{
+    name: string;
+    description: string;
+    steps: Array<{
+      name: string;
+      description: string;
+      type: 'START' | 'TASK' | 'DECISION' | 'END';
+      duration?: number;
+      position: { x: number; y: number };
+      metadata?: {
+        responsibleRole?: string;
+        department?: string;
+        requiredSystems?: string[];
+      };
+    }>;
+    connections: Array<{
+      sourceStepId: string;
+      targetStepId: string;
+      label?: string;
+      type: 'DEFAULT' | 'CONDITIONAL';
+    }>;
+  }> {
+    const prompt = `You are an expert business process designer specializing in ${industryContext} industry operations. Based on the following description, design a complete, detailed business process.
+
+Process Type: ${processType}
+Description: ${description}
+
+Design a comprehensive business process that:
+1. Captures all key steps and activities
+2. Includes proper flow with start and end events
+3. Identifies decision points where applicable
+4. Estimates realistic durations for each step
+5. Specifies responsible roles and departments
+6. Identifies required systems/tools
+7. Uses industry-standard ${industryContext} terminology
+
+Guidelines:
+- Create 5-15 process steps (optimal range for clarity)
+- Always start with exactly ONE START step
+- Always end with exactly ONE END step
+- Use TASK for normal activities
+- Use DECISION for conditional branching (yes/no, approve/reject)
+- Position steps in a logical left-to-right, top-to-bottom flow
+- Provide clear, actionable step names (verb + noun format)
+- Include detailed descriptions for each step
+- Estimate durations in minutes (realistic for ${industryContext} operations)
+
+Return the process design in this EXACT JSON format:
+{
+  "name": "concise process name (3-6 words)",
+  "description": "detailed 2-3 sentence description of the process and its purpose",
+  "steps": [
+    {
+      "id": "step_0",
+      "name": "step name",
+      "description": "detailed step description",
+      "type": "START|TASK|DECISION|END",
+      "duration": duration_in_minutes or null for START/END,
+      "position": { "x": x_coordinate, "y": y_coordinate },
+      "metadata": {
+        "responsibleRole": "role name",
+        "department": "department name",
+        "requiredSystems": ["system1", "system2"]
+      }
+    }
+  ],
+  "connections": [
+    {
+      "sourceStepId": "step_0",
+      "targetStepId": "step_1",
+      "label": "optional label for decision branches",
+      "type": "DEFAULT|CONDITIONAL"
+    }
+  ]
+}
+
+IMPORTANT:
+- Use step IDs like "step_0", "step_1", "step_2", etc.
+- Position coordinates should create a readable flow (x: 0-1000, y: 0-800)
+- Space steps approximately 250px apart horizontally, 150px vertically
+- For decision branches, position both paths clearly
+- Ensure every step is connected (no orphaned steps)
+- Return ONLY valid JSON, no additional text`;
+
+    try {
+      const result = await this.callAI(organizationId, prompt);
+      // Parse the result if it's a string
+      const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+      return parsed;
+    } catch (error) {
+      console.error('AI Process Generation Error:', error);
+      throw new Error('Failed to generate process from description with AI');
+    }
+  }
+
+  /**
    * Generate a target (TO_BE) process based on recommendations
    */
   static async generateTargetProcess(

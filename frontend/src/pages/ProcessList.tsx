@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Home, Settings } from 'lucide-react';
+import { Home, Settings, Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Process } from '../lib/api';
 import { Button } from '../components/ui/button';
+import ProcessGenerationModal from '../components/ProcessGenerationModal';
 
 export const ProcessList = () => {
   const [processes, setProcesses] = useState<Process[]>([]);
@@ -11,6 +12,7 @@ export const ProcessList = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [isGenerationModalOpen, setIsGenerationModalOpen] = useState(false);
 
   const [filters, setFilters] = useState<{
     status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
@@ -122,12 +124,21 @@ export const ProcessList = () => {
                 Create and manage your process maps
               </p>
             </div>
-            <Button
-              onClick={() => navigate('/processes/new')}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              + Create New Process
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setIsGenerationModalOpen(true)}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white flex items-center gap-2"
+              >
+                <Sparkles size={16} />
+                Generate with AI
+              </Button>
+              <Button
+                onClick={() => navigate('/processes/new')}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                + Create New Process
+              </Button>
+            </div>
           </div>
 
           {/* Filters */}
@@ -281,6 +292,16 @@ export const ProcessList = () => {
           </div>
         )}
       </div>
+
+      {/* AI Process Generation Modal */}
+      <ProcessGenerationModal
+        isOpen={isGenerationModalOpen}
+        onClose={() => setIsGenerationModalOpen(false)}
+        onSuccess={() => {
+          setIsGenerationModalOpen(false);
+          loadProcesses();
+        }}
+      />
     </div>
   );
 };
