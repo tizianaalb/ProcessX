@@ -136,6 +136,7 @@ const AdminPanel: React.FC = () => {
           lastName: '',
           role: 'user',
           password: '',
+          organizationId: '',
         });
         fetchUsers();
       } else {
@@ -152,12 +153,17 @@ const AdminPanel: React.FC = () => {
     if (!editingUser) return;
 
     try {
-      const updateData = {
+      const updateData: any = {
         email: formData.email,
         firstName: formData.firstName,
         lastName: formData.lastName,
         role: formData.role,
       };
+
+      // Only include organizationId if super admin and value is set
+      if (isSuperAdmin && formData.organizationId) {
+        updateData.organizationId = formData.organizationId;
+      }
 
       const response = await fetch(
         `http://localhost:3100/api/admin/users/${editingUser.id}`,
@@ -183,6 +189,7 @@ const AdminPanel: React.FC = () => {
           lastName: '',
           role: 'user',
           password: '',
+          organizationId: '',
         });
         fetchUsers();
       } else {
@@ -264,6 +271,7 @@ const AdminPanel: React.FC = () => {
       lastName: user.lastName,
       role: user.role,
       password: '',
+      organizationId: user.organizationId,
     });
     setShowForm(true);
   };
@@ -333,6 +341,7 @@ const AdminPanel: React.FC = () => {
                       lastName: '',
                       role: 'user',
                       password: '',
+                      organizationId: '',
                     });
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
@@ -362,6 +371,7 @@ const AdminPanel: React.FC = () => {
                         lastName: '',
                         role: 'user',
                         password: '',
+                        organizationId: '',
                       });
                     }}
                     className="text-gray-500 hover:text-gray-700"
@@ -436,6 +446,30 @@ const AdminPanel: React.FC = () => {
                     </select>
                   </div>
 
+                  {/* Organization selector (super admin only) */}
+                  {isSuperAdmin && organizations.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        🏢 Organization
+                      </label>
+                      <select
+                        value={formData.organizationId}
+                        onChange={(e) =>
+                          setFormData({ ...formData, organizationId: e.target.value })
+                        }
+                        className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      >
+                        <option value="">Select Organization...</option>
+                        {organizations.map((org) => (
+                          <option key={org.id} value={org.id}>
+                            {org.name} ({org._count.users} users)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   {!editingUser && (
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -482,6 +516,7 @@ const AdminPanel: React.FC = () => {
                           lastName: '',
                           role: 'user',
                           password: '',
+                          organizationId: '',
                         });
                       }}
                       className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
