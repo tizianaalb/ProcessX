@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Users, Clock, ChevronRight, Loader } from 'lucide-react';
-import { api, ProcessTemplate } from '../lib/api';
+import { api } from '../lib/api';
+import type { ProcessTemplate } from '../lib/api';
 import { Button } from './ui/button';
 
 interface TemplateGalleryProps {
