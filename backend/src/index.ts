@@ -24,8 +24,33 @@ const PORT = process.env.PORT || 3100;
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+// CORS Configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:5200',
+  'http://localhost:5200',
+  'http://localhost:3000',
+];
+
+// Add Railway domains if in production
+if (process.env.NODE_ENV === 'production') {
+  // Railway domains will be added via FRONTEND_URL environment variable
+  if (process.env.RAILWAY_STATIC_URL) {
+    allowedOrigins.push(`https://${process.env.RAILWAY_STATIC_URL}`);
+  }
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5200',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    // Check if origin is allowed or is a Railway domain
+    if (allowedOrigins.includes(origin) || origin.includes('.railway.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -94,7 +119,7 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 ProcessX Backend API running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API URL: http://localhost:${PORT}`);
