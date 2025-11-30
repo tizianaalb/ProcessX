@@ -621,14 +621,24 @@ const ProcessEditorInner = () => {
 
   const handleFitView = () => {
     if (reactFlowInstance) {
-      // Fit view with proper options to ensure all nodes are visible
-      reactFlowInstance.fitView({
-        padding: 0.15,
-        includeHiddenNodes: false,
-        minZoom: 0.1,
-        maxZoom: 1.5,
-        duration: 800
-      });
+      console.log('FitView button clicked, nodes:', nodes.length);
+      console.log('ReactFlow instance:', reactFlowInstance);
+
+      // Try to fit view with proper options to ensure all nodes are visible
+      try {
+        reactFlowInstance.fitView({
+          padding: 0.2,
+          includeHiddenNodes: false,
+          minZoom: 0.1,
+          maxZoom: 2,
+          duration: 500
+        });
+        console.log('FitView called successfully');
+      } catch (error) {
+        console.error('Error calling fitView:', error);
+      }
+    } else {
+      console.warn('ReactFlow instance is not initialized');
     }
   };
 
