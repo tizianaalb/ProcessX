@@ -7,8 +7,11 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
-// GET /api/admin/users - Get all users in the organization
+// GET /api/admin/users - Get all users in the organization (or all for super_admin)
 router.get('/users', adminController.getUsers);
+
+// GET /api/admin/organizations - Get all organizations (super_admin only)
+router.get('/organizations', adminController.getOrganizations);
 
 // POST /api/admin/users - Create a new user
 router.post('/users', adminController.createUser);

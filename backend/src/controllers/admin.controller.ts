@@ -8,8 +8,9 @@ const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  role: z.enum(['admin', 'user']),
+  role: z.enum(['super_admin', 'admin', 'user']),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+  organizationId: z.string().uuid().optional(), // For super_admin to assign users to orgs
 });
 
 // Validation schema for user update
@@ -17,7 +18,8 @@ const updateUserSchema = z.object({
   email: z.string().email('Invalid email address').optional(),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
-  role: z.enum(['admin', 'user']).optional(),
+  role: z.enum(['super_admin', 'admin', 'user']).optional(),
+  organizationId: z.string().uuid().optional(), // For super_admin to move users between orgs
 });
 
 // Validation schema for password reset
@@ -26,7 +28,7 @@ const resetPasswordSchema = z.object({
 });
 
 /**
- * Get all users in the organization
+ * Get all users in the organization (or all users for super_admin)
  */
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -42,15 +44,18 @@ export const getUsers = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (currentUser.role !== 'admin') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
       return res.status(403).json({ error: 'Only administrators can manage users' });
     }
 
-    // Get all users in the organization
+    // Super admins can see all users across all organizations
+    const whereClause = currentUser.role === 'super_admin'
+      ? {}
+      : { organizationId: currentUser.organizationId };
+
+    // Get users
     const users = await prisma.user.findMany({
-      where: {
-        organizationId: currentUser.organizationId,
-      },
+      where: whereClause,
       select: {
         id: true,
         email: true,
@@ -59,6 +64,7 @@ export const getUsers = async (req: Request, res: Response) => {
         role: true,
         createdAt: true,
         updatedAt: true,
+        organizationId: true,
         organization: {
           select: {
             id: true,
@@ -74,6 +80,7 @@ export const getUsers = async (req: Request, res: Response) => {
     res.json({
       success: true,
       users,
+      isSuperAdmin: currentUser.role === 'super_admin',
     });
   } catch (error) {
     console.error('Get users error:', error);
@@ -98,7 +105,7 @@ export const createUser = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (currentUser.role !== 'admin') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
       return res.status(403).json({ error: 'Only administrators can create users' });
     }
 
@@ -114,6 +121,12 @@ export const createUser = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email already exists' });
     }
 
+    // Determine organization ID
+    // Super admins can specify organization, regular admins use their own
+    const targetOrgId = currentUser.role === 'super_admin' && validatedData.organizationId
+      ? validatedData.organizationId
+      : currentUser.organizationId;
+
     // Hash password
     const passwordHash = await bcrypt.hash(validatedData.password, 10);
 
@@ -125,7 +138,7 @@ export const createUser = async (req: Request, res: Response) => {
         lastName: validatedData.lastName,
         role: validatedData.role,
         passwordHash,
-        organizationId: currentUser.organizationId,
+        organizationId: targetOrgId,
       },
       select: {
         id: true,
@@ -173,23 +186,29 @@ export const updateUser = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (currentUser.role !== 'admin') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
       return res.status(403).json({ error: 'Only administrators can update users' });
     }
 
     // Validate request body
     const validatedData = updateUserSchema.parse(req.body);
 
-    // Check if target user exists and belongs to same organization
+    // Check if target user exists
+    // Super admins can update any user, regular admins only in their org
+    const whereClause = currentUser.role === 'super_admin'
+      ? { id: targetUserId }
+      : { id: targetUserId, organizationId: currentUser.organizationId };
+
     const targetUser = await prisma.user.findFirst({
-      where: {
-        id: targetUserId,
-        organizationId: currentUser.organizationId,
-      },
+      where: whereClause,
     });
 
     if (!targetUser) {
-      return res.status(404).json({ error: 'User not found in your organization' });
+      return res.status(404).json({
+        error: currentUser.role === 'super_admin'
+          ? 'User not found'
+          : 'User not found in your organization'
+      });
     }
 
     // If email is being changed, check it doesn't already exist
@@ -253,7 +272,7 @@ export const deleteUser = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (currentUser.role !== 'admin') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
       return res.status(403).json({ error: 'Only administrators can delete users' });
     }
 
@@ -262,16 +281,22 @@ export const deleteUser = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'You cannot delete your own account' });
     }
 
-    // Check if target user exists and belongs to same organization
+    // Check if target user exists
+    // Super admins can delete any user, regular admins only in their org
+    const whereClause = currentUser.role === 'super_admin'
+      ? { id: targetUserId }
+      : { id: targetUserId, organizationId: currentUser.organizationId };
+
     const targetUser = await prisma.user.findFirst({
-      where: {
-        id: targetUserId,
-        organizationId: currentUser.organizationId,
-      },
+      where: whereClause,
     });
 
     if (!targetUser) {
-      return res.status(404).json({ error: 'User not found in your organization' });
+      return res.status(404).json({
+        error: currentUser.role === 'super_admin'
+          ? 'User not found'
+          : 'User not found in your organization'
+      });
     }
 
     // Delete user
@@ -307,23 +332,29 @@ export const resetUserPassword = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (currentUser.role !== 'admin') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
       return res.status(403).json({ error: 'Only administrators can reset passwords' });
     }
 
     // Validate request body
     const validatedData = resetPasswordSchema.parse(req.body);
 
-    // Check if target user exists and belongs to same organization
+    // Check if target user exists
+    // Super admins can reset password for any user, regular admins only in their org
+    const whereClause = currentUser.role === 'super_admin'
+      ? { id: targetUserId }
+      : { id: targetUserId, organizationId: currentUser.organizationId };
+
     const targetUser = await prisma.user.findFirst({
-      where: {
-        id: targetUserId,
-        organizationId: currentUser.organizationId,
-      },
+      where: whereClause,
     });
 
     if (!targetUser) {
-      return res.status(404).json({ error: 'User not found in your organization' });
+      return res.status(404).json({
+        error: currentUser.role === 'super_admin'
+          ? 'User not found'
+          : 'User not found in your organization'
+      });
     }
 
     // Hash new password
@@ -348,5 +379,55 @@ export const resetUserPassword = async (req: Request, res: Response) => {
     }
     console.error('Reset user password error:', error);
     res.status(500).json({ error: 'Failed to reset password' });
+  }
+};
+
+/**
+ * Get all organizations (super_admin only)
+ */
+export const getOrganizations = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    // Get user and verify super_admin role
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super administrators can view all organizations' });
+    }
+
+    // Get all organizations with user count
+    const organizations = await prisma.organization.findMany({
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            users: true,
+            processes: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    res.json({
+      success: true,
+      organizations,
+    });
+  } catch (error) {
+    console.error('Get organizations error:', error);
+    res.status(500).json({ error: 'Failed to fetch organizations' });
   }
 };

@@ -21,12 +21,24 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'user';
+  role: 'super_admin' | 'admin' | 'user';
   createdAt: string;
   updatedAt: string;
+  organizationId: string;
   organization: {
     id: string;
     name: string;
+  };
+}
+
+interface Organization {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    users: number;
+    processes: number;
   };
 }
 
@@ -34,6 +46,8 @@ const AdminPanel: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -47,13 +61,17 @@ const AdminPanel: React.FC = () => {
     email: '',
     firstName: '',
     lastName: '',
-    role: 'user' as 'admin' | 'user',
+    role: 'user' as 'super_admin' | 'admin' | 'user',
     password: '',
+    organizationId: '',
   });
 
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.role === 'super_admin') {
       fetchUsers();
+      if (user?.role === 'super_admin') {
+        fetchOrganizations();
+      }
     }
   }, [user]);
 
@@ -68,11 +86,29 @@ const AdminPanel: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users);
+        setIsSuperAdmin(data.isSuperAdmin || false);
       }
     } catch (error) {
       console.error('Failed to fetch users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    try {
+      const response = await fetch('http://localhost:3100/api/admin/organizations', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizations(data.organizations);
+      }
+    } catch (error) {
+      console.error('Failed to fetch organizations:', error);
     }
   };
 
@@ -390,12 +426,13 @@ const AdminPanel: React.FC = () => {
                     <select
                       value={formData.role}
                       onChange={(e) =>
-                        setFormData({ ...formData, role: e.target.value as 'admin' | 'user' })
+                        setFormData({ ...formData, role: e.target.value as 'super_admin' | 'admin' | 'user' })
                       }
                       className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="user">👤 User</option>
                       <option value="admin">👑 Admin</option>
+                      <option value="super_admin">⭐ Super Admin</option>
                     </select>
                   </div>
 
@@ -486,7 +523,11 @@ const AdminPanel: React.FC = () => {
                             <h3 className="text-lg font-bold text-gray-900">
                               {u.firstName} {u.lastName}
                             </h3>
-                            {u.role === 'admin' ? (
+                            {u.role === 'super_admin' ? (
+                              <span className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold rounded-full">
+                                ⭐ SUPER ADMIN
+                              </span>
+                            ) : u.role === 'admin' ? (
                               <span className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-full">
                                 <Shield className="w-3 h-3" />
                                 ADMIN
@@ -498,6 +539,11 @@ const AdminPanel: React.FC = () => {
                             )}
                           </div>
                           <p className="text-sm text-gray-600 font-medium">{u.email}</p>
+                          {isSuperAdmin && u.organization && (
+                            <p className="text-xs text-indigo-600 font-semibold mt-1">
+                              🏢 {u.organization.name}
+                            </p>
+                          )}
                           <p className="text-xs text-gray-500 mt-1">
                             Created {new Date(u.createdAt).toLocaleDateString()}
                           </p>
