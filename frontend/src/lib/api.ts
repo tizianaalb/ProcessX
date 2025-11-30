@@ -641,7 +641,7 @@ class ApiClient {
   }
 
   // Export analysis endpoint
-  async exportAnalysis(analysisId: string, format: 'markdown' | 'powerpoint'): Promise<void> {
+  async exportAnalysis(analysisId: string, format: 'markdown' | 'powerpoint' | 'pdf' | 'excel' | 'word'): Promise<void> {
     const token = localStorage.getItem('auth_token');
     if (!token) {
       throw new Error('Not authenticated');
@@ -664,7 +664,14 @@ class ApiClient {
 
       // Get filename from Content-Disposition header or create default
       const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `analysis.${format === 'markdown' ? 'md' : 'pptx'}`;
+      const extensionMap: Record<string, string> = {
+        markdown: 'md',
+        powerpoint: 'pptx',
+        pdf: 'pdf',
+        excel: 'xlsx',
+        word: 'docx',
+      };
+      let filename = `analysis.${extensionMap[format] || 'file'}`;
       if (contentDisposition) {
         const matches = /filename="(.+)"/.exec(contentDisposition);
         if (matches && matches[1]) {

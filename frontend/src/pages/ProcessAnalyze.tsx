@@ -125,7 +125,7 @@ export const ProcessAnalyze = () => {
     }
   };
 
-  const handleExportAnalysis = async (analysisId: string, format: 'markdown' | 'powerpoint') => {
+  const handleExportAnalysis = async (analysisId: string, format: 'markdown' | 'powerpoint' | 'pdf' | 'excel' | 'word') => {
     try {
       setError(null);
 
@@ -488,6 +488,33 @@ export const ProcessAnalyze = () => {
                         >
                           <Download size={16} />
                           PowerPoint
+                        </Button>
+                        <Button
+                          onClick={() => handleExportAnalysis(analysis.id, 'pdf')}
+                          variant="outline"
+                          className="text-sm flex items-center gap-2 bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100 border-red-200"
+                          title="Export as PDF"
+                        >
+                          <Download size={16} />
+                          PDF
+                        </Button>
+                        <Button
+                          onClick={() => handleExportAnalysis(analysis.id, 'excel')}
+                          variant="outline"
+                          className="text-sm flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-green-200"
+                          title="Export as Excel"
+                        >
+                          <Download size={16} />
+                          Excel
+                        </Button>
+                        <Button
+                          onClick={() => handleExportAnalysis(analysis.id, 'word')}
+                          variant="outline"
+                          className="text-sm flex items-center gap-2 bg-gradient-to-r from-cyan-50 to-sky-50 hover:from-cyan-100 hover:to-sky-100 border-cyan-200"
+                          title="Export as Word"
+                        >
+                          <Download size={16} />
+                          Word
                         </Button>
                       </div>
 

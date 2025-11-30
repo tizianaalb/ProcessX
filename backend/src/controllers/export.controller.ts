@@ -359,6 +359,204 @@ export const exportAnalysisPowerPoint = async (req: Request, res: Response) => {
 };
 
 /**
+ * Export analysis as PDF
+ */
+export const exportAnalysisPDF = async (req: Request, res: Response) => {
+  try {
+    const { analysisId } = req.params;
+    const userId = (req as any).user.userId;
+
+    // Get user's organization
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { organizationId: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get analysis with process
+    const analysis = await prisma.aIAnalysis.findFirst({
+      where: {
+        id: analysisId,
+      },
+      include: {
+        process: {
+          where: {
+            organizationId: user.organizationId,
+          },
+        },
+      },
+    });
+
+    if (!analysis || !analysis.process) {
+      return res.status(404).json({ error: 'Analysis not found or access denied' });
+    }
+
+    if (analysis.status !== 'COMPLETED') {
+      return res.status(400).json({ error: 'Analysis is not completed yet' });
+    }
+
+    // Generate PDF
+    const buffer = await ExportService.generateAnalysisPDF(analysisId, user.organizationId);
+
+    // Log export
+    await prisma.export.create({
+      data: {
+        processId: analysis.processId,
+        userId,
+        exportType: 'pdf',
+        fileSizeBytes: BigInt(buffer.length),
+        status: 'completed',
+      },
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${analysis.process.name.replace(/[^a-z0-9]/gi, '_')}_analysis.pdf"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Analysis PDF export error:', error);
+    res.status(500).json({
+      error: 'Failed to generate PDF',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Export analysis as Excel
+ */
+export const exportAnalysisExcel = async (req: Request, res: Response) => {
+  try {
+    const { analysisId } = req.params;
+    const userId = (req as any).user.userId;
+
+    // Get user's organization
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { organizationId: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get analysis with process
+    const analysis = await prisma.aIAnalysis.findFirst({
+      where: {
+        id: analysisId,
+      },
+      include: {
+        process: {
+          where: {
+            organizationId: user.organizationId,
+          },
+        },
+      },
+    });
+
+    if (!analysis || !analysis.process) {
+      return res.status(404).json({ error: 'Analysis not found or access denied' });
+    }
+
+    if (analysis.status !== 'COMPLETED') {
+      return res.status(400).json({ error: 'Analysis is not completed yet' });
+    }
+
+    // Generate Excel
+    const buffer = await ExportService.generateAnalysisExcel(analysisId, user.organizationId);
+
+    // Log export
+    await prisma.export.create({
+      data: {
+        processId: analysis.processId,
+        userId,
+        exportType: 'xlsx',
+        fileSizeBytes: BigInt(buffer.length),
+        status: 'completed',
+      },
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${analysis.process.name.replace(/[^a-z0-9]/gi, '_')}_analysis.xlsx"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Analysis Excel export error:', error);
+    res.status(500).json({
+      error: 'Failed to generate Excel',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
+ * Export analysis as Word
+ */
+export const exportAnalysisWord = async (req: Request, res: Response) => {
+  try {
+    const { analysisId } = req.params;
+    const userId = (req as any).user.userId;
+
+    // Get user's organization
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { organizationId: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get analysis with process
+    const analysis = await prisma.aIAnalysis.findFirst({
+      where: {
+        id: analysisId,
+      },
+      include: {
+        process: {
+          where: {
+            organizationId: user.organizationId,
+          },
+        },
+      },
+    });
+
+    if (!analysis || !analysis.process) {
+      return res.status(404).json({ error: 'Analysis not found or access denied' });
+    }
+
+    if (analysis.status !== 'COMPLETED') {
+      return res.status(400).json({ error: 'Analysis is not completed yet' });
+    }
+
+    // Generate Word
+    const buffer = await ExportService.generateAnalysisWord(analysisId, user.organizationId);
+
+    // Log export
+    await prisma.export.create({
+      data: {
+        processId: analysis.processId,
+        userId,
+        exportType: 'docx',
+        fileSizeBytes: BigInt(buffer.length),
+        status: 'completed',
+      },
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${analysis.process.name.replace(/[^a-z0-9]/gi, '_')}_analysis.docx"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Analysis Word export error:', error);
+    res.status(500).json({
+      error: 'Failed to generate Word document',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+/**
  * Get export history for a process
  */
 export const getExportHistory = async (req: Request, res: Response) => {

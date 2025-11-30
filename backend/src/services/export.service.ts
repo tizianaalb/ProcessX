@@ -975,4 +975,476 @@ export class ExportService {
 
     return await pptx.writeFile({ outputType: 'nodebuffer' }) as Buffer;
   }
+
+  /**
+   * Generate PDF export for analysis
+   */
+  static async generateAnalysisPDF(analysisId: string, organizationId: string): Promise<Buffer> {
+    const data = await this.getAnalysisData(analysisId, organizationId);
+
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      // Title Page
+      doc.fontSize(28).fillColor('#7C3AED').text('AI Process Analysis Report', { align: 'center' });
+      doc.moveDown(0.5);
+      doc.fontSize(20).fillColor('#6366F1').text(data.processName, { align: 'center' });
+      doc.moveDown(0.3);
+      doc.fontSize(12).fillColor('#9CA3AF').text(`Analysis Date: ${data.createdAt.toLocaleDateString()}`, { align: 'center' });
+      doc.moveDown(2);
+
+      // Process Understanding
+      if (data.understanding) {
+        doc.fontSize(18).fillColor('#1F2937').text('Process Understanding');
+        doc.moveDown(0.5);
+
+        if (data.understanding.overview) {
+          doc.fontSize(14).fillColor('#374151').text('Overview', { underline: true });
+          doc.moveDown(0.3);
+          doc.fontSize(11).fillColor('#4B5563').text(data.understanding.overview);
+          doc.moveDown(1);
+        }
+
+        if (data.understanding.keySteps && data.understanding.keySteps.length > 0) {
+          doc.fontSize(14).fillColor('#374151').text('Key Steps', { underline: true });
+          doc.moveDown(0.3);
+          data.understanding.keySteps.forEach((step: string) => {
+            doc.fontSize(11).fillColor('#4B5563').text(`• ${step}`);
+          });
+          doc.moveDown(1);
+        }
+      }
+
+      // Pain Points
+      if (data.painPoints && data.painPoints.length > 0) {
+        doc.addPage();
+        doc.fontSize(18).fillColor('#1F2937').text('Identified Pain Points');
+        doc.moveDown(1);
+
+        data.painPoints.forEach((pp: any, index: number) => {
+          doc.fontSize(13).fillColor('#DC2626').text(`${index + 1}. ${pp.title}`);
+          doc.moveDown(0.2);
+          doc.fontSize(10).fillColor('#6B7280').text(`Category: ${pp.category} | Severity: ${pp.severity}`);
+          doc.moveDown(0.2);
+          doc.fontSize(11).fillColor('#4B5563').text(pp.description);
+          if (pp.impact) {
+            doc.fontSize(10).fillColor('#059669').text(`Impact: ${pp.impact}`);
+          }
+          doc.moveDown(0.8);
+        });
+      }
+
+      // Recommendations
+      if (data.recommendations && data.recommendations.length > 0) {
+        doc.addPage();
+        doc.fontSize(18).fillColor('#1F2937').text('Optimization Recommendations');
+        doc.moveDown(1);
+
+        data.recommendations.forEach((rec: any, index: number) => {
+          doc.fontSize(13).fillColor('#2563EB').text(`${index + 1}. ${rec.title}`);
+          doc.moveDown(0.2);
+          doc.fontSize(10).fillColor('#6B7280').text(`Category: ${rec.category} | Priority: ${rec.priority}`);
+          doc.moveDown(0.2);
+          doc.fontSize(11).fillColor('#4B5563').text(rec.description);
+          doc.moveDown(0.8);
+        });
+      }
+
+      // Generated TO-BE Process
+      if (data.toBeProcess) {
+        doc.addPage();
+        doc.fontSize(18).fillColor('#1F2937').text('Generated TO-BE Process');
+        doc.moveDown(0.5);
+        doc.fontSize(14).fillColor('#374151').text(data.toBeProcess.name);
+        doc.moveDown(0.3);
+        doc.fontSize(11).fillColor('#4B5563').text(data.toBeProcess.description || '');
+        doc.moveDown(1);
+
+        doc.fontSize(14).fillColor('#374151').text('Process Steps', { underline: true });
+        doc.moveDown(0.5);
+        data.toBeProcess.steps.forEach((step: any, index: number) => {
+          doc.fontSize(11).fillColor('#4B5563').text(`${index + 1}. ${step.name} (${step.type})`);
+          if (step.description) {
+            doc.fontSize(10).fillColor('#6B7280').text(`   ${step.description}`);
+          }
+        });
+      }
+
+      doc.end();
+    });
+  }
+
+  /**
+   * Generate Excel export for analysis
+   */
+  static async generateAnalysisExcel(analysisId: string, organizationId: string): Promise<Buffer> {
+    const data = await this.getAnalysisData(analysisId, organizationId);
+    const workbook = new ExcelJS.Workbook();
+
+    // Overview Sheet
+    const overviewSheet = workbook.addWorksheet('Overview');
+    overviewSheet.columns = [
+      { header: 'Property', key: 'property', width: 25 },
+      { header: 'Value', key: 'value', width: 60 },
+    ];
+
+    overviewSheet.addRow({ property: 'Process Name', value: data.processName });
+    overviewSheet.addRow({ property: 'Analysis Date', value: data.createdAt.toLocaleDateString() });
+    overviewSheet.addRow({ property: 'Organization', value: organizationId });
+
+    if (data.understanding?.overview) {
+      overviewSheet.addRow({ property: 'Overview', value: data.understanding.overview });
+    }
+
+    // Style header
+    overviewSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    overviewSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF7C3AED' },
+    };
+
+    // Pain Points Sheet
+    if (data.painPoints && data.painPoints.length > 0) {
+      const ppSheet = workbook.addWorksheet('Pain Points');
+      ppSheet.columns = [
+        { header: 'Title', key: 'title', width: 30 },
+        { header: 'Category', key: 'category', width: 20 },
+        { header: 'Severity', key: 'severity', width: 15 },
+        { header: 'Description', key: 'description', width: 50 },
+        { header: 'Impact', key: 'impact', width: 40 },
+      ];
+
+      data.painPoints.forEach((pp: any) => {
+        ppSheet.addRow({
+          title: pp.title,
+          category: pp.category,
+          severity: pp.severity,
+          description: pp.description,
+          impact: pp.impact || 'N/A',
+        });
+      });
+
+      // Style header
+      ppSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      ppSheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFDC2626' },
+      };
+    }
+
+    // Recommendations Sheet
+    if (data.recommendations && data.recommendations.length > 0) {
+      const recSheet = workbook.addWorksheet('Recommendations');
+      recSheet.columns = [
+        { header: 'Title', key: 'title', width: 30 },
+        { header: 'Category', key: 'category', width: 20 },
+        { header: 'Priority', key: 'priority', width: 15 },
+        { header: 'Description', key: 'description', width: 50 },
+        { header: 'Expected Benefits', key: 'benefits', width: 40 },
+      ];
+
+      data.recommendations.forEach((rec: any) => {
+        recSheet.addRow({
+          title: rec.title,
+          category: rec.category,
+          priority: rec.priority,
+          description: rec.description,
+          benefits: rec.expectedBenefits?.join('; ') || 'N/A',
+        });
+      });
+
+      // Style header
+      recSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      recSheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF2563EB' },
+      };
+    }
+
+    // TO-BE Process Sheet
+    if (data.toBeProcess && data.toBeProcess.steps) {
+      const toBeSheet = workbook.addWorksheet('TO-BE Process');
+      toBeSheet.columns = [
+        { header: '#', key: 'index', width: 5 },
+        { header: 'Step Name', key: 'name', width: 30 },
+        { header: 'Type', key: 'type', width: 15 },
+        { header: 'Description', key: 'description', width: 50 },
+        { header: 'Duration (min)', key: 'duration', width: 15 },
+      ];
+
+      data.toBeProcess.steps.forEach((step: any, index: number) => {
+        toBeSheet.addRow({
+          index: index + 1,
+          name: step.name,
+          type: step.type,
+          description: step.description || '',
+          duration: step.duration || 'N/A',
+        });
+      });
+
+      // Style header
+      toBeSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      toBeSheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF059669' },
+      };
+    }
+
+    return await workbook.xlsx.writeBuffer() as Buffer;
+  }
+
+  /**
+   * Generate Word document export for analysis
+   */
+  static async generateAnalysisWord(analysisId: string, organizationId: string): Promise<Buffer> {
+    const data = await this.getAnalysisData(analysisId, organizationId);
+    const sections: any[] = [];
+
+    // Title
+    sections.push(
+      new Paragraph({
+        text: 'AI Process Analysis Report',
+        heading: HeadingLevel.TITLE,
+        spacing: { after: 200 },
+      })
+    );
+
+    sections.push(
+      new Paragraph({
+        text: data.processName,
+        heading: HeadingLevel.HEADING_1,
+        spacing: { after: 100 },
+      })
+    );
+
+    sections.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Analysis Date: ${data.createdAt.toLocaleDateString()}`,
+            italics: true,
+            color: '6B7280',
+          }),
+        ],
+        spacing: { after: 400 },
+      })
+    );
+
+    // Process Understanding
+    if (data.understanding) {
+      sections.push(
+        new Paragraph({
+          text: 'Process Understanding',
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 300, after: 200 },
+        })
+      );
+
+      if (data.understanding.overview) {
+        sections.push(
+          new Paragraph({
+            text: 'Overview',
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 200, after: 100 },
+          })
+        );
+        sections.push(
+          new Paragraph({
+            text: data.understanding.overview,
+            spacing: { after: 200 },
+          })
+        );
+      }
+
+      if (data.understanding.keySteps && data.understanding.keySteps.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'Key Steps',
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 200, after: 100 },
+          })
+        );
+        data.understanding.keySteps.forEach((step: string) => {
+          sections.push(
+            new Paragraph({
+              text: step,
+              bullet: { level: 0 },
+            })
+          );
+        });
+      }
+    }
+
+    // Pain Points
+    if (data.painPoints && data.painPoints.length > 0) {
+      sections.push(
+        new Paragraph({
+          text: 'Identified Pain Points',
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 400, after: 200 },
+        })
+      );
+
+      data.painPoints.forEach((pp: any, index: number) => {
+        sections.push(
+          new Paragraph({
+            text: `${index + 1}. ${pp.title}`,
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 200, after: 100 },
+          })
+        );
+        sections.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Category: ${pp.category} | Severity: ${pp.severity}`,
+                bold: true,
+                color: 'DC2626',
+              }),
+            ],
+            spacing: { after: 100 },
+          })
+        );
+        sections.push(
+          new Paragraph({
+            text: pp.description,
+            spacing: { after: 100 },
+          })
+        );
+        if (pp.impact) {
+          sections.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Impact: ${pp.impact}`,
+                  italics: true,
+                  color: '059669',
+                }),
+              ],
+              spacing: { after: 200 },
+            })
+          );
+        }
+      });
+    }
+
+    // Recommendations
+    if (data.recommendations && data.recommendations.length > 0) {
+      sections.push(
+        new Paragraph({
+          text: 'Optimization Recommendations',
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 400, after: 200 },
+        })
+      );
+
+      data.recommendations.forEach((rec: any, index: number) => {
+        sections.push(
+          new Paragraph({
+            text: `${index + 1}. ${rec.title}`,
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 200, after: 100 },
+          })
+        );
+        sections.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Category: ${rec.category} | Priority: ${rec.priority}`,
+                bold: true,
+                color: '2563EB',
+              }),
+            ],
+            spacing: { after: 100 },
+          })
+        );
+        sections.push(
+          new Paragraph({
+            text: rec.description,
+            spacing: { after: 200 },
+          })
+        );
+      });
+    }
+
+    // Generated TO-BE Process
+    if (data.toBeProcess) {
+      sections.push(
+        new Paragraph({
+          text: 'Generated TO-BE Process',
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 400, after: 200 },
+        })
+      );
+      sections.push(
+        new Paragraph({
+          text: data.toBeProcess.name,
+          heading: HeadingLevel.HEADING_2,
+          spacing: { after: 100 },
+        })
+      );
+      if (data.toBeProcess.description) {
+        sections.push(
+          new Paragraph({
+            text: data.toBeProcess.description,
+            spacing: { after: 200 },
+          })
+        );
+      }
+
+      sections.push(
+        new Paragraph({
+          text: 'Process Steps',
+          heading: HeadingLevel.HEADING_3,
+          spacing: { before: 200, after: 100 },
+        })
+      );
+
+      data.toBeProcess.steps.forEach((step: any, index: number) => {
+        sections.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${index + 1}. ${step.name}`,
+                bold: true,
+              }),
+              new TextRun({
+                text: ` (${step.type})`,
+                italics: true,
+                color: '6B7280',
+              }),
+            ],
+          })
+        );
+        if (step.description) {
+          sections.push(
+            new Paragraph({
+              text: `   ${step.description}`,
+              spacing: { after: 100 },
+            })
+          );
+        }
+      });
+    }
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: sections,
+        },
+      ],
+    });
+
+    return await Packer.toBuffer(doc);
+  }
 }

@@ -50,4 +50,22 @@ router.get(
   exportController.exportAnalysisPowerPoint
 );
 
+// GET /api/analyses/:analysisId/export/pdf - Export analysis as PDF
+router.get(
+  '/analyses/:analysisId/export/pdf',
+  exportController.exportAnalysisPDF
+);
+
+// GET /api/analyses/:analysisId/export/excel - Export analysis as Excel
+router.get(
+  '/analyses/:analysisId/export/excel',
+  exportController.exportAnalysisExcel
+);
+
+// GET /api/analyses/:analysisId/export/word - Export analysis as Word
+router.get(
+  '/analyses/:analysisId/export/word',
+  exportController.exportAnalysisWord
+);
+
 export default router;
