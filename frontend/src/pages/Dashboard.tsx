@@ -109,7 +109,7 @@ export const Dashboard: React.FC = () => {
                   <span className="text-xs text-slate-500">{user?.email}</span>
                 </div>
               </div>
-              {user?.role === 'admin' && (
+              {(user?.role === 'admin' || user?.role === 'super_admin') && (
                 <>
                   <Button
                     variant="outline"
