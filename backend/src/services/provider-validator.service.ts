@@ -217,7 +217,7 @@ export class ProviderValidatorService {
         throw new Error('Invalid Azure OpenAI API key or endpoint');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { data?: any[] };
       const models: ModelInfo[] = data.data?.map((d: any) => ({
         id: d.id,
         name: d.model || d.id,
