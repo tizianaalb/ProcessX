@@ -299,14 +299,56 @@ export const deleteUser = async (req: Request, res: Response) => {
       });
     }
 
-    // Delete user
-    await prisma.user.delete({
-      where: { id: targetUserId },
+    // Delete user with cascading deletion of related data
+    // Use a transaction to ensure all deletions succeed or all fail
+    await prisma.$transaction(async (tx) => {
+      // Delete AI analyses initiated by this user
+      await tx.aIAnalysis.deleteMany({
+        where: { initiatedById: targetUserId },
+      });
+
+      // Delete approved recommendations by this user
+      await tx.processRecommendation.updateMany({
+        where: { approvedById: targetUserId },
+        data: { approvedById: null },
+      });
+
+      // Delete audit logs
+      await tx.auditLog.deleteMany({
+        where: { userId: targetUserId },
+      });
+
+      // Delete exports
+      await tx.export.deleteMany({
+        where: { userId: targetUserId },
+      });
+
+      // Update pain points to remove identifier (or delete if preferred)
+      // Setting identifiedById to null to preserve pain point history
+      await tx.painPoint.updateMany({
+        where: { identifiedById: targetUserId },
+        data: { identifiedById: userId }, // Transfer to the admin doing the deletion
+      });
+
+      // Delete target processes created by this user
+      await tx.targetProcess.deleteMany({
+        where: { createdById: targetUserId },
+      });
+
+      // Delete processes created by this user (this will cascade to steps, connections, etc.)
+      await tx.process.deleteMany({
+        where: { createdById: targetUserId },
+      });
+
+      // Finally, delete the user
+      await tx.user.delete({
+        where: { id: targetUserId },
+      });
     });
 
     res.json({
       success: true,
-      message: 'User deleted successfully',
+      message: 'User and all associated data deleted successfully',
     });
   } catch (error) {
     console.error('Delete user error:', error);
