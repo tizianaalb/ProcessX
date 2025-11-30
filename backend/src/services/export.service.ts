@@ -638,9 +638,6 @@ export class ExportService {
       },
       include: {
         process: {
-          where: {
-            organizationId,
-          },
           include: {
             steps: {
               orderBy: { order: 'asc' },
@@ -652,6 +649,11 @@ export class ExportService {
 
     if (!analysis || !analysis.process) {
       throw new Error('Analysis not found or access denied');
+    }
+
+    // Check organization access
+    if (analysis.process.organizationId !== organizationId) {
+      throw new Error('Access denied');
     }
 
     if (analysis.status !== 'COMPLETED') {
@@ -973,7 +975,7 @@ export class ExportService {
       });
     }
 
-    return await pptx.writeFile({ outputType: 'nodebuffer' }) as Buffer;
+    return await pptx.write({ outputType: 'nodebuffer' }) as Buffer;
   }
 
   /**
