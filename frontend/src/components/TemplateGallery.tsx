@@ -154,50 +154,71 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-4">
                   {filteredTemplates.map((template) => (
                     <div
                       key={template.id}
-                      className="bg-white border-2 border-gray-200 rounded-lg p-6 hover:border-blue-500 hover:shadow-lg transition-all cursor-pointer"
+                      className="bg-white border-2 border-gray-200 rounded-lg p-5 hover:border-blue-500 hover:shadow-lg transition-all cursor-pointer"
                       onClick={() => setSelectedTemplate(template)}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-bold text-gray-900 flex-1">
-                          {template.name}
-                        </h3>
-                        {template.category && (
-                          <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-                            {getCategoryLabel(template.category)}
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                        {template.description}
-                      </p>
-
-                      <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                        <div className="flex items-center gap-1">
-                          <FileText size={14} />
-                          <span>{template.templateData.steps.length} steps</span>
+                      <div className="flex items-start gap-4">
+                        {/* Left side - Icon/Stats */}
+                        <div className="flex-shrink-0">
+                          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                            <FileText className="w-8 h-8 text-white" />
+                          </div>
+                          <div className="mt-2 text-center">
+                            <div className="text-xs text-gray-500">Uses</div>
+                            <div className="text-sm font-bold text-gray-900">{template.usageCount}</div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Users size={14} />
-                          <span>{template.usageCount} uses</span>
+
+                        {/* Middle - Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="text-xl font-bold text-gray-900">
+                              {template.name}
+                            </h3>
+                            {template.category && (
+                              <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full whitespace-nowrap">
+                                {getCategoryLabel(template.category)}
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                            {template.description}
+                          </p>
+
+                          <div className="flex items-center gap-6 text-sm text-gray-500">
+                            <div className="flex items-center gap-2">
+                              <FileText size={16} className="text-blue-600" />
+                              <span className="font-medium">{template.templateData.steps.length} steps</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock size={16} className="text-cyan-600" />
+                              <span className="font-medium">
+                                {template.templateData.steps.reduce((sum: number, step: any) => sum + (step.duration || 0), 0)} min total
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right side - Action Button */}
+                        <div className="flex-shrink-0 flex items-center">
+                          <Button
+                            variant="outline"
+                            className="flex items-center gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTemplate(template);
+                            }}
+                          >
+                            View Details
+                            <ChevronRight size={16} />
+                          </Button>
                         </div>
                       </div>
-
-                      <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-center gap-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTemplate(template);
-                        }}
-                      >
-                        View Details
-                        <ChevronRight size={16} />
-                      </Button>
                     </div>
                   ))}
                 </div>
