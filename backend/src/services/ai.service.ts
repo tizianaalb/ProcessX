@@ -459,7 +459,12 @@ IMPORTANT:
     try {
       const result = await this.callAI(organizationId, prompt);
       // Parse the result if it's a string
-      const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+      let jsonString = typeof result === 'string' ? result : JSON.stringify(result);
+
+      // Strip markdown code blocks if present
+      jsonString = jsonString.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
+
+      const parsed = JSON.parse(jsonString);
       return parsed;
     } catch (error) {
       console.error('AI Process Generation Error:', error);

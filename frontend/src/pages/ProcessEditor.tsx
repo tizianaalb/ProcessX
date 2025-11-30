@@ -9,6 +9,7 @@ import ReactFlow, {
   BackgroundVariant,
   MiniMap,
   ReactFlowProvider,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings, Sparkles, Lightbulb, Maximize2, Download } from 'lucide-react';
@@ -150,7 +151,13 @@ const ProcessEditorInner = () => {
       // Auto-fit view to show all nodes after a short delay
       setTimeout(() => {
         if (reactFlowInstance && flowNodes.length > 0) {
-          reactFlowInstance.fitView({ padding: 0.2, duration: 400 });
+          reactFlowInstance.fitView({
+            padding: 0.15,
+            includeHiddenNodes: false,
+            minZoom: 0.1,
+            maxZoom: 1.5,
+            duration: 800
+          });
         }
       }, 100);
     } catch (error: any) {
@@ -614,7 +621,14 @@ const ProcessEditorInner = () => {
 
   const handleFitView = () => {
     if (reactFlowInstance) {
-      reactFlowInstance.fitView({ padding: 0.2, duration: 400 });
+      // Fit view with proper options to ensure all nodes are visible
+      reactFlowInstance.fitView({
+        padding: 0.15,
+        includeHiddenNodes: false,
+        minZoom: 0.1,
+        maxZoom: 1.5,
+        duration: 800
+      });
     }
   };
 
