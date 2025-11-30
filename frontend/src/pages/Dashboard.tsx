@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Zap,
   Target,
+  Shield,
   BarChart3,
   Sparkles,
   Clock,
@@ -109,14 +110,24 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
               {user?.role === 'admin' && (
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/settings')}
-                  className="flex items-center gap-2 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600 transition-all shadow-sm"
-                >
-                  <Settings size={18} />
-                  <span className="hidden sm:inline font-medium">Settings</span>
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/admin')}
+                    className="flex items-center gap-2 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"
+                  >
+                    <Shield size={18} />
+                    <span className="hidden sm:inline font-medium">Admin Panel</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/settings')}
+                    className="flex items-center gap-2 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600 transition-all shadow-sm"
+                  >
+                    <Settings size={18} />
+                    <span className="hidden sm:inline font-medium">Settings</span>
+                  </Button>
+                </>
               )}
               <Button
                 variant="outline"

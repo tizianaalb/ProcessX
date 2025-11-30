@@ -9,6 +9,7 @@ import { ProcessEditor } from './pages/ProcessEditor';
 import { ProcessAnalyze } from './pages/ProcessAnalyze';
 import { ProcessRecommendations } from './pages/ProcessRecommendations';
 import Settings from './pages/Settings';
+import AdminPanel from './pages/AdminPanel';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
@@ -80,6 +81,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPanel />
               </ProtectedRoute>
             }
           />
