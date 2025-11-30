@@ -148,16 +148,11 @@ const ProcessEditorInner = () => {
       setNodes(flowNodes);
       setEdges(flowEdges);
 
-      // Auto-fit view to show all nodes after a short delay
+      // Initialize viewport to origin (0, 0) with zoom 1
       setTimeout(() => {
         if (reactFlowInstance && flowNodes.length > 0) {
-          reactFlowInstance.fitView({
-            padding: 0.15,
-            includeHiddenNodes: false,
-            minZoom: 0.1,
-            maxZoom: 1.5,
-            duration: 800
-          });
+          reactFlowInstance.setViewport({ x: 0, y: 0, zoom: 1 });
+          console.log('Viewport initialized to origin:', reactFlowInstance.getViewport());
         }
       }, 100);
     } catch (error: any) {
@@ -627,47 +622,13 @@ const ProcessEditorInner = () => {
     }
 
     if (reactFlowInstance && nodes.length > 0) {
-      console.log('FitView button clicked, nodes:', nodes.length);
+      console.log('Resetting viewport to origin');
 
-      // Calculate bounding box manually
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-      nodes.forEach(node => {
-        const x = node.position.x;
-        const y = node.position.y;
-        // Estimate node dimensions
-        const width = 200;
-        const height = 100;
-
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x + width);
-        maxY = Math.max(maxY, y + height);
-      });
-
-      console.log('Calculated bounds:', { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY });
-
-      try {
-        // Use fitBounds instead of fitView
-        reactFlowInstance.fitBounds(
-          {
-            x: minX,
-            y: minY,
-            width: maxX - minX,
-            height: maxY - minY
-          },
-          {
-            padding: 0.2,
-            minZoom: 0.1,
-            maxZoom: 1.5
-          }
-        );
-        console.log('FitBounds executed, new viewport:', reactFlowInstance.getViewport());
-      } catch (error) {
-        console.error('Error calling fitBounds:', error);
-      }
+      // Simply reset to origin view
+      reactFlowInstance.setViewport({ x: 0, y: 0, zoom: 1 });
+      console.log('Viewport reset to:', reactFlowInstance.getViewport());
     } else {
-      console.warn('ReactFlow instance not ready or no nodes to fit. Nodes:', nodes.length);
+      console.warn('ReactFlow instance not ready or no nodes. Nodes:', nodes.length);
     }
   };
 
@@ -910,7 +871,6 @@ const ProcessEditorInner = () => {
             onDragOver={onDragOver}
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
-            fitView
             attributionPosition="bottom-left"
             style={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
