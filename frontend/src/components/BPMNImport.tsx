@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Upload, FileText, Loader, CheckCircle2, AlertCircle } from 'lucide-react';
 import { api } from '../lib/api';
-import Button from './Button';
+import { Button } from './ui/button';
 
 interface BPMNImportProps {
   isOpen: boolean;
@@ -156,14 +156,10 @@ const BPMNImport: React.FC<BPMNImportProps> = ({ isOpen, onClose, onSuccess }) =
                 </p>
                 <p className="text-sm text-gray-600 mb-4">or</p>
                 <label htmlFor="bpmn-file-input">
-                  <Button
-                    as="span"
-                    variant="outline"
-                    className="cursor-pointer bg-white hover:bg-gray-50"
-                  >
+                  <span className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer bg-white hover:bg-gray-50 text-sm font-medium transition-colors">
                     <FileText size={16} />
                     Choose File
-                  </Button>
+                  </span>
                 </label>
                 <p className="text-xs text-gray-500 mt-4">
                   Supported formats: .bpmn, .xml (BPMN 2.0)
@@ -177,15 +173,9 @@ const BPMNImport: React.FC<BPMNImportProps> = ({ isOpen, onClose, onSuccess }) =
                   {(file.size / 1024).toFixed(2)} KB
                 </p>
                 <label htmlFor="bpmn-file-input">
-                  <Button
-                    as="span"
-                    variant="outline"
-                    size="sm"
-                    className="cursor-pointer"
-                    disabled={uploading}
-                  >
+                  <span className={`inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'}`}>
                     Choose Different File
-                  </Button>
+                  </span>
                 </label>
               </>
             )}
