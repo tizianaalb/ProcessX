@@ -648,6 +648,7 @@ class ApiClient {
     }
 
     const url = `${this.baseURL}/api/analyses/${analysisId}/export/${format}`;
+    console.log('Export URL:', url);
 
     try {
       const response = await fetch(url, {
@@ -657,13 +658,23 @@ class ApiClient {
         },
       });
 
+      console.log('Export response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Export failed' }));
-        throw new Error(error.error || 'Export failed');
+        const errorText = await response.text();
+        console.error('Export error response:', errorText);
+        try {
+          const error = JSON.parse(errorText);
+          throw new Error(error.error || error.message || 'Export failed');
+        } catch {
+          throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+        }
       }
 
       // Get filename from Content-Disposition header or create default
       const contentDisposition = response.headers.get('Content-Disposition');
+      console.log('Content-Disposition:', contentDisposition);
+
       const extensionMap: Record<string, string> = {
         markdown: 'md',
         powerpoint: 'pptx',
@@ -679,8 +690,12 @@ class ApiClient {
         }
       }
 
+      console.log('Downloading file:', filename);
+
       // Download the file
       const blob = await response.blob();
+      console.log('Blob size:', blob.size, 'type:', blob.type);
+
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
@@ -689,7 +704,10 @@ class ApiClient {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(downloadUrl);
+
+      console.log('File download triggered');
     } catch (error) {
+      console.error('Export analysis error:', error);
       if (error instanceof Error) {
         throw error;
       }

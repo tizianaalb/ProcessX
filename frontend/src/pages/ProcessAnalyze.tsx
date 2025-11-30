@@ -128,10 +128,13 @@ export const ProcessAnalyze = () => {
   const handleExportAnalysis = async (analysisId: string, format: 'markdown' | 'powerpoint' | 'pdf' | 'excel' | 'word') => {
     try {
       setError(null);
+      console.log(`Exporting analysis ${analysisId} as ${format}`);
 
       // Call API to download the export
       await api.exportAnalysis(analysisId, format);
+      console.log(`Export successful: ${format}`);
     } catch (err: any) {
+      console.error(`Export failed for ${format}:`, err);
       setError(err.message || `Failed to export analysis as ${format}`);
     }
   };
