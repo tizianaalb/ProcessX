@@ -639,6 +639,140 @@ class ApiClient {
       }
     );
   }
+
+  // Export analysis endpoint
+  async exportAnalysis(analysisId: string, format: 'markdown' | 'powerpoint'): Promise<void> {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseURL}/api/analyses/${analysisId}/export/${format}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Export failed' }));
+        throw new Error(error.error || 'Export failed');
+      }
+
+      // Get filename from Content-Disposition header or create default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `analysis.${format === 'markdown' ? 'md' : 'pptx'}`;
+      if (contentDisposition) {
+        const matches = /filename="(.+)"/.exec(contentDisposition);
+        if (matches && matches[1]) {
+          filename = matches[1];
+        }
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to export analysis');
+    }
+  }
+
+  // BPMN import endpoint
+  async importBPMN(file: File): Promise<{ success: boolean; message: string; process?: any }> {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const formData = new FormData();
+    formData.append('bpmnFile', file);
+
+    try {
+      const response = await fetch(`${this.baseURL}/api/bpmn/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Failed to import BPMN');
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to import BPMN file');
+    }
+  }
+
+  // BPMN export endpoint
+  async exportBPMN(processId: string): Promise<void> {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const url = `${this.baseURL}/api/processes/${processId}/export/bpmn`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Export failed' }));
+        throw new Error(error.error || 'Failed to export BPMN');
+      }
+
+      // Get filename from Content-Disposition header or create default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'process.bpmn';
+      if (contentDisposition) {
+        const matches = /filename="(.+)"/.exec(contentDisposition);
+        if (matches && matches[1]) {
+          filename = matches[1];
+        }
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to export BPMN');
+    }
+  }
 }
 
 export const api = new ApiClient(API_URL);

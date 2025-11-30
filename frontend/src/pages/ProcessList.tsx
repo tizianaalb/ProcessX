@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Home, Settings, Sparkles, FileText } from 'lucide-react';
+import { Home, Settings, Sparkles, FileText, Upload } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Process } from '../lib/api';
 import { Button } from '../components/ui/button';
 import ProcessGenerationModal from '../components/ProcessGenerationModal';
 import TemplateGallery from '../components/TemplateGallery';
+import BPMNImport from '../components/BPMNImport';
 
 export const ProcessList = () => {
   const [processes, setProcesses] = useState<Process[]>([]);
@@ -15,6 +16,7 @@ export const ProcessList = () => {
   const navigate = useNavigate();
   const [isGenerationModalOpen, setIsGenerationModalOpen] = useState(false);
   const [isTemplateGalleryOpen, setIsTemplateGalleryOpen] = useState(false);
+  const [isBPMNImportOpen, setIsBPMNImportOpen] = useState(false);
 
   const [filters, setFilters] = useState<{
     status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
@@ -127,6 +129,14 @@ export const ProcessList = () => {
               </p>
             </div>
             <div className="flex gap-3">
+              <Button
+                onClick={() => setIsBPMNImportOpen(true)}
+                variant="outline"
+                className="text-sm flex items-center gap-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+              >
+                <Upload size={16} />
+                Import BPMN
+              </Button>
               <Button
                 onClick={() => setIsTemplateGalleryOpen(true)}
                 className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white flex items-center gap-2"
@@ -301,6 +311,16 @@ export const ProcessList = () => {
           </div>
         )}
       </div>
+
+      {/* BPMN Import Modal */}
+      <BPMNImport
+        isOpen={isBPMNImportOpen}
+        onClose={() => setIsBPMNImportOpen(false)}
+        onSuccess={() => {
+          setIsBPMNImportOpen(false);
+          loadProcesses();
+        }}
+      />
 
       {/* Template Gallery Modal */}
       <TemplateGallery

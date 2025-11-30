@@ -11,7 +11,7 @@ import ReactFlow, {
   ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings, Sparkles, Lightbulb, Maximize2 } from 'lucide-react';
+import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings, Sparkles, Lightbulb, Maximize2, Download } from 'lucide-react';
 
 // Types for ReactFlow
 type Node = any;
@@ -599,6 +599,19 @@ const ProcessEditorInner = () => {
     }
   };
 
+  const handleExportBPMN = async () => {
+    if (!process) {
+      alert('Please create a process first');
+      return;
+    }
+
+    try {
+      await api.exportBPMN(process.id);
+    } catch (error: any) {
+      alert('Failed to export BPMN: ' + error.message);
+    }
+  };
+
   const handleFitView = () => {
     if (reactFlowInstance) {
       reactFlowInstance.fitView({ padding: 0.2, duration: 400 });
@@ -775,6 +788,16 @@ const ProcessEditorInner = () => {
           >
             <Maximize2 size={16} />
             Fit to View
+          </Button>
+          <Button
+            onClick={handleExportBPMN}
+            disabled={!process}
+            variant="outline"
+            className="flex items-center gap-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+            title="Export process as BPMN 2.0 XML"
+          >
+            <Download size={16} />
+            Export BPMN
           </Button>
           <Button onClick={handleSave} disabled={saving || !process} className="bg-blue-600 hover:bg-blue-700 text-white">
             {saving ? 'Saving...' : 'Save Process'}

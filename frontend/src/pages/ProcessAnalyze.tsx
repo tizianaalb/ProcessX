@@ -12,6 +12,8 @@ import {
   ArrowLeft,
   RefreshCw,
   Trash2,
+  Download,
+  FileText,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { AIAnalysis, Process } from '../lib/api';
@@ -120,6 +122,17 @@ export const ProcessAnalyze = () => {
       setError(err.message || 'Failed to delete analysis');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleExportAnalysis = async (analysisId: string, format: 'markdown' | 'powerpoint') => {
+    try {
+      setError(null);
+
+      // Call API to download the export
+      await api.exportAnalysis(analysisId, format);
+    } catch (err: any) {
+      setError(err.message || `Failed to export analysis as ${format}`);
     }
   };
 
@@ -449,14 +462,32 @@ export const ProcessAnalyze = () => {
                         )}
                       </div>
 
-                      {/* View Details Button */}
-                      <div className="mt-4">
+                      {/* Action Buttons */}
+                      <div className="mt-4 flex gap-2">
                         <Button
                           onClick={() => setExpandedAnalysisId(expandedAnalysisId === analysis.id ? null : analysis.id)}
                           variant="outline"
-                          className="w-full text-sm"
+                          className="flex-1 text-sm"
                         >
                           {expandedAnalysisId === analysis.id ? 'Hide Details' : 'View Details'}
+                        </Button>
+                        <Button
+                          onClick={() => handleExportAnalysis(analysis.id, 'markdown')}
+                          variant="outline"
+                          className="text-sm flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200"
+                          title="Export as Markdown"
+                        >
+                          <FileText size={16} />
+                          Markdown
+                        </Button>
+                        <Button
+                          onClick={() => handleExportAnalysis(analysis.id, 'powerpoint')}
+                          variant="outline"
+                          className="text-sm flex items-center gap-2 bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-purple-200"
+                          title="Export as PowerPoint"
+                        >
+                          <Download size={16} />
+                          PowerPoint
                         </Button>
                       </div>
 

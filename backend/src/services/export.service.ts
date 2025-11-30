@@ -627,4 +627,352 @@ export class ExportService {
 
     return await Packer.toBuffer(doc);
   }
+
+  /**
+   * Fetch analysis data for export
+   */
+  private static async getAnalysisData(analysisId: string, organizationId: string) {
+    const analysis = await prisma.aIAnalysis.findFirst({
+      where: {
+        id: analysisId,
+      },
+      include: {
+        process: {
+          where: {
+            organizationId,
+          },
+          include: {
+            steps: {
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!analysis || !analysis.process) {
+      throw new Error('Analysis not found or access denied');
+    }
+
+    if (analysis.status !== 'COMPLETED') {
+      throw new Error('Analysis is not completed yet');
+    }
+
+    return {
+      id: analysis.id,
+      processName: analysis.process.name,
+      processDescription: analysis.process.description || undefined,
+      processType: analysis.process.type,
+      analysisType: analysis.analysisType,
+      understanding: analysis.understanding as any,
+      painPoints: (analysis.detectedPainPoints as any) || [],
+      recommendations: (analysis.recommendations as any) || [],
+      toBeProcess: (analysis.generatedProcess as any) || null,
+      aiProvider: analysis.aiProvider,
+      createdAt: analysis.createdAt,
+      completedAt: analysis.updatedAt,
+    };
+  }
+
+  /**
+   * Generate Markdown export for analysis
+   */
+  static async generateAnalysisMarkdown(analysisId: string, organizationId: string): Promise<string> {
+    const data = await this.getAnalysisData(analysisId, organizationId);
+
+    let markdown = `# Process Analysis Report\n\n`;
+    markdown += `**Process:** ${data.processName}\n`;
+    markdown += `**Analysis Date:** ${data.createdAt.toLocaleDateString()}\n`;
+    markdown += `**AI Provider:** ${data.aiProvider}\n\n`;
+
+    // Process Understanding
+    if (data.understanding) {
+      markdown += `## Process Understanding\n\n`;
+      if (data.understanding.overview) {
+        markdown += `### Overview\n${data.understanding.overview}\n\n`;
+      }
+      if (data.understanding.purpose) {
+        markdown += `### Purpose\n${data.understanding.purpose}\n\n`;
+      }
+      if (data.understanding.keyStakeholders && data.understanding.keyStakeholders.length > 0) {
+        markdown += `### Key Stakeholders\n`;
+        data.understanding.keyStakeholders.forEach((stakeholder: any) => {
+          markdown += `- **${stakeholder.role}**: ${stakeholder.responsibilities}\n`;
+        });
+        markdown += `\n`;
+      }
+      if (data.understanding.inputs && data.understanding.inputs.length > 0) {
+        markdown += `### Process Inputs\n`;
+        data.understanding.inputs.forEach((input: string) => {
+          markdown += `- ${input}\n`;
+        });
+        markdown += `\n`;
+      }
+      if (data.understanding.outputs && data.understanding.outputs.length > 0) {
+        markdown += `### Process Outputs\n`;
+        data.understanding.outputs.forEach((output: string) => {
+          markdown += `- ${output}\n`;
+        });
+        markdown += `\n`;
+      }
+    }
+
+    // Pain Points
+    if (data.painPoints && data.painPoints.length > 0) {
+      markdown += `## Identified Pain Points\n\n`;
+      data.painPoints.forEach((pp: any, idx: number) => {
+        markdown += `### ${idx + 1}. ${pp.title}\n`;
+        markdown += `**Category:** ${pp.category} | **Severity:** ${pp.severity}\n\n`;
+        markdown += `${pp.description}\n\n`;
+        if (pp.affectedSteps && pp.affectedSteps.length > 0) {
+          markdown += `**Affected Steps:** ${pp.affectedSteps.join(', ')}\n\n`;
+        }
+        if (pp.impact) {
+          markdown += `**Impact:** ${pp.impact}\n\n`;
+        }
+        if (pp.estimatedCost) {
+          markdown += `**Estimated Cost:** $${pp.estimatedCost.toLocaleString()}/year\n\n`;
+        }
+      });
+    }
+
+    // Recommendations
+    if (data.recommendations && data.recommendations.length > 0) {
+      markdown += `## Recommendations\n\n`;
+      data.recommendations.forEach((rec: any, idx: number) => {
+        markdown += `### ${idx + 1}. ${rec.title}\n`;
+        markdown += `**Category:** ${rec.category} | **Priority:** ${rec.priority}\n\n`;
+        markdown += `${rec.description}\n\n`;
+        if (rec.expectedBenefits && rec.expectedBenefits.length > 0) {
+          markdown += `**Expected Benefits:**\n`;
+          rec.expectedBenefits.forEach((benefit: string) => {
+            markdown += `- ${benefit}\n`;
+          });
+          markdown += `\n`;
+        }
+        if (rec.implementationSteps && rec.implementationSteps.length > 0) {
+          markdown += `**Implementation Steps:**\n`;
+          rec.implementationSteps.forEach((step: string, stepIdx: number) => {
+            markdown += `${stepIdx + 1}. ${step}\n`;
+          });
+          markdown += `\n`;
+        }
+        if (rec.estimatedEffort) {
+          markdown += `**Estimated Effort:** ${rec.estimatedEffort}\n\n`;
+        }
+      });
+    }
+
+    // TO-BE Process
+    if (data.toBeProcess) {
+      markdown += `## Target (TO-BE) Process\n\n`;
+      markdown += `**Name:** ${data.toBeProcess.name}\n`;
+      markdown += `**Description:** ${data.toBeProcess.description || 'N/A'}\n\n`;
+      if (data.toBeProcess.steps && data.toBeProcess.steps.length > 0) {
+        markdown += `### Process Steps\n\n`;
+        data.toBeProcess.steps.forEach((step: any, idx: number) => {
+          markdown += `${idx + 1}. **${step.name}** (${step.type})\n`;
+          if (step.description) {
+            markdown += `   ${step.description}\n`;
+          }
+          if (step.duration) {
+            markdown += `   Duration: ${step.duration} minutes\n`;
+          }
+          markdown += `\n`;
+        });
+      }
+      if (data.toBeProcess.expectedImprovements && data.toBeProcess.expectedImprovements.length > 0) {
+        markdown += `### Expected Improvements\n`;
+        data.toBeProcess.expectedImprovements.forEach((improvement: string) => {
+          markdown += `- ${improvement}\n`;
+        });
+        markdown += `\n`;
+      }
+    }
+
+    markdown += `---\n`;
+    markdown += `*Report generated on ${new Date().toLocaleString()}*\n`;
+
+    return markdown;
+  }
+
+  /**
+   * Generate PowerPoint export for analysis
+   */
+  static async generateAnalysisPowerPoint(analysisId: string, organizationId: string): Promise<Buffer> {
+    const data = await this.getAnalysisData(analysisId, organizationId);
+    const pptx = new PptxGenJS();
+
+    // Title Slide
+    const titleSlide = pptx.addSlide();
+    titleSlide.background = { fill: '7C3AED' }; // Purple
+    titleSlide.addText('AI Process Analysis Report', {
+      x: 0.5,
+      y: 2,
+      w: 9,
+      h: 1,
+      fontSize: 44,
+      bold: true,
+      color: 'FFFFFF',
+      align: 'center',
+    });
+    titleSlide.addText(data.processName, {
+      x: 0.5,
+      y: 3.2,
+      w: 9,
+      h: 0.8,
+      fontSize: 28,
+      color: 'E9D5FF',
+      align: 'center',
+    });
+    titleSlide.addText(`Analysis Date: ${data.createdAt.toLocaleDateString()}`, {
+      x: 0.5,
+      y: 4.5,
+      w: 9,
+      h: 0.5,
+      fontSize: 16,
+      color: 'DDD6FE',
+      align: 'center',
+    });
+
+    // Understanding Slide
+    if (data.understanding) {
+      const understandingSlide = pptx.addSlide();
+      understandingSlide.addText('Process Understanding', {
+        x: 0.5,
+        y: 0.5,
+        w: 9,
+        h: 0.6,
+        fontSize: 32,
+        bold: true,
+        color: '1F2937',
+      });
+
+      let yPos = 1.3;
+      if (data.understanding.overview) {
+        understandingSlide.addText('Overview', {
+          x: 0.5,
+          y: yPos,
+          w: 9,
+          h: 0.4,
+          fontSize: 18,
+          bold: true,
+          color: '374151',
+        });
+        yPos += 0.5;
+        understandingSlide.addText(data.understanding.overview, {
+          x: 0.5,
+          y: yPos,
+          w: 9,
+          h: 1.5,
+          fontSize: 14,
+          color: '4B5563',
+        });
+      }
+    }
+
+    // Pain Points Slides
+    if (data.painPoints && data.painPoints.length > 0) {
+      const painPointsSlide = pptx.addSlide();
+      painPointsSlide.addText('Identified Pain Points', {
+        x: 0.5,
+        y: 0.5,
+        w: 9,
+        h: 0.6,
+        fontSize: 32,
+        bold: true,
+        color: '1F2937',
+      });
+
+      const ppRows = [
+        ['Title', 'Category', 'Severity', 'Impact'],
+        ...data.painPoints.slice(0, 8).map((pp: any) => [
+          pp.title,
+          pp.category,
+          pp.severity,
+          pp.impact || 'N/A',
+        ]),
+      ];
+
+      painPointsSlide.addTable(ppRows, {
+        x: 0.5,
+        y: 1.5,
+        w: 9,
+        fontSize: 12,
+        color: '374151',
+        fill: { color: 'FEF2F2' },
+        border: { pt: 1, color: 'FCA5A5' },
+      });
+    }
+
+    // Recommendations Slides
+    if (data.recommendations && data.recommendations.length > 0) {
+      const recSlide = pptx.addSlide();
+      recSlide.addText('Recommendations', {
+        x: 0.5,
+        y: 0.5,
+        w: 9,
+        h: 0.6,
+        fontSize: 32,
+        bold: true,
+        color: '1F2937',
+      });
+
+      const recRows = [
+        ['Title', 'Category', 'Priority', 'Effort'],
+        ...data.recommendations.slice(0, 8).map((rec: any) => [
+          rec.title,
+          rec.category,
+          rec.priority,
+          rec.estimatedEffort || 'N/A',
+        ]),
+      ];
+
+      recSlide.addTable(recRows, {
+        x: 0.5,
+        y: 1.5,
+        w: 9,
+        fontSize: 12,
+        color: '374151',
+        fill: { color: 'F0FDF4' },
+        border: { pt: 1, color: '86EFAC' },
+      });
+    }
+
+    // TO-BE Process Slide
+    if (data.toBeProcess && data.toBeProcess.steps) {
+      const toBeSlide = pptx.addSlide();
+      toBeSlide.addText('Target (TO-BE) Process', {
+        x: 0.5,
+        y: 0.5,
+        w: 9,
+        h: 0.6,
+        fontSize: 32,
+        bold: true,
+        color: '1F2937',
+      });
+
+      const stepRows = [
+        ['#', 'Step Name', 'Type', 'Duration'],
+        ...data.toBeProcess.steps.slice(0, 10).map((step: any, idx: number) => [
+          (idx + 1).toString(),
+          step.name,
+          step.type,
+          step.duration ? `${step.duration} min` : 'N/A',
+        ]),
+      ];
+
+      toBeSlide.addTable(stepRows, {
+        x: 0.5,
+        y: 1.5,
+        w: 9,
+        fontSize: 12,
+        color: '374151',
+        fill: { color: 'EFF6FF' },
+        border: { pt: 1, color: '93C5FD' },
+      });
+    }
+
+    return await pptx.writeFile({ outputType: 'nodebuffer' }) as Buffer;
+  }
 }

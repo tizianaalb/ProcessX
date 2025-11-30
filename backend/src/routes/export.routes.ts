@@ -37,4 +37,17 @@ router.get(
   exportController.getExportHistory
 );
 
+// Analysis Export Routes
+// GET /api/analyses/:analysisId/export/markdown - Export analysis as Markdown
+router.get(
+  '/analyses/:analysisId/export/markdown',
+  exportController.exportAnalysisMarkdown
+);
+
+// GET /api/analyses/:analysisId/export/powerpoint - Export analysis as PowerPoint
+router.get(
+  '/analyses/:analysisId/export/powerpoint',
+  exportController.exportAnalysisPowerPoint
+);
+
 export default router;

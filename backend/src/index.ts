@@ -12,6 +12,7 @@ import exportRoutes from './routes/export.routes.js';
 import aiAnalysisRoutes from './routes/ai-analysis.routes.js';
 import aiGenerationRoutes from './routes/ai-generation.routes.js';
 import templateRoutes from './routes/template.routes.js';
+import bpmnRoutes from './routes/bpmn.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api', exportRoutes);
 app.use('/api', aiAnalysisRoutes);
 app.use('/api/processes', aiGenerationRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api', bpmnRoutes);
 
 app.get('/api', (req, res) => {
   res.json({
