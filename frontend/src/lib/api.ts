@@ -642,7 +642,7 @@ class ApiClient {
 
   // Export analysis endpoint
   async exportAnalysis(analysisId: string, format: 'markdown' | 'powerpoint'): Promise<void> {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     if (!token) {
       throw new Error('Not authenticated');
     }
@@ -692,7 +692,7 @@ class ApiClient {
 
   // BPMN import endpoint
   async importBPMN(file: File): Promise<{ success: boolean; message: string; process?: any }> {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     if (!token) {
       throw new Error('Not authenticated');
     }
@@ -726,7 +726,7 @@ class ApiClient {
 
   // BPMN export endpoint
   async exportBPMN(processId: string): Promise<void> {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     if (!token) {
       throw new Error('Not authenticated');
     }
