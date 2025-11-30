@@ -20,7 +20,8 @@ async function resetPassword(email: string, newPassword: string) {
       select: {
         id: true,
         email: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         organizationId: true,
       },
     });
@@ -31,7 +32,7 @@ async function resetPassword(email: string, newPassword: string) {
     }
 
     console.log('👤 User found:');
-    console.log(`   Name: ${user.name}`);
+    console.log(`   Name: ${user.firstName} ${user.lastName}`);
     console.log(`   Email: ${user.email}`);
     console.log(`   ID: ${user.id}\n`);
 
@@ -41,7 +42,7 @@ async function resetPassword(email: string, newPassword: string) {
     // Update the password
     await prisma.user.update({
       where: { email },
-      data: { password: hashedPassword },
+      data: { passwordHash: hashedPassword },
     });
 
     console.log('✅ Password reset successfully!\n');
