@@ -250,16 +250,17 @@ export const exportAnalysisMarkdown = async (req: Request, res: Response) => {
         id: analysisId,
       },
       include: {
-        process: {
-          where: {
-            organizationId: user.organizationId,
-          },
-        },
+        process: true,
       },
     });
 
     if (!analysis || !analysis.process) {
-      return res.status(404).json({ error: 'Analysis not found or access denied' });
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
+
+    // Check if process belongs to user's organization
+    if (analysis.process.organizationId !== user.organizationId) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     if (analysis.status !== 'COMPLETED') {
@@ -316,16 +317,17 @@ export const exportAnalysisPowerPoint = async (req: Request, res: Response) => {
         id: analysisId,
       },
       include: {
-        process: {
-          where: {
-            organizationId: user.organizationId,
-          },
-        },
+        process: true,
       },
     });
 
     if (!analysis || !analysis.process) {
-      return res.status(404).json({ error: 'Analysis not found or access denied' });
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
+
+    // Check if process belongs to user's organization
+    if (analysis.process.organizationId !== user.organizationId) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     if (analysis.status !== 'COMPLETED') {
@@ -382,16 +384,17 @@ export const exportAnalysisPDF = async (req: Request, res: Response) => {
         id: analysisId,
       },
       include: {
-        process: {
-          where: {
-            organizationId: user.organizationId,
-          },
-        },
+        process: true,
       },
     });
 
     if (!analysis || !analysis.process) {
-      return res.status(404).json({ error: 'Analysis not found or access denied' });
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
+
+    // Check if process belongs to user's organization
+    if (analysis.process.organizationId !== user.organizationId) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     if (analysis.status !== 'COMPLETED') {
@@ -448,16 +451,17 @@ export const exportAnalysisExcel = async (req: Request, res: Response) => {
         id: analysisId,
       },
       include: {
-        process: {
-          where: {
-            organizationId: user.organizationId,
-          },
-        },
+        process: true,
       },
     });
 
     if (!analysis || !analysis.process) {
-      return res.status(404).json({ error: 'Analysis not found or access denied' });
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
+
+    // Check if process belongs to user's organization
+    if (analysis.process.organizationId !== user.organizationId) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     if (analysis.status !== 'COMPLETED') {
@@ -514,16 +518,17 @@ export const exportAnalysisWord = async (req: Request, res: Response) => {
         id: analysisId,
       },
       include: {
-        process: {
-          where: {
-            organizationId: user.organizationId,
-          },
-        },
+        process: true,
       },
     });
 
     if (!analysis || !analysis.process) {
-      return res.status(404).json({ error: 'Analysis not found or access denied' });
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
+
+    // Check if process belongs to user's organization
+    if (analysis.process.organizationId !== user.organizationId) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     if (analysis.status !== 'COMPLETED') {
