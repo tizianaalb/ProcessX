@@ -91,7 +91,7 @@ app.use('/api/admin', adminRoutes);
 app.get('/api', (req, res) => {
   res.json({
     message: 'ProcessX API',
-    version: '1.0.0',
+    version: '1.0.1',
     endpoints: {
       health: '/health',
       auth: '/api/auth/*',
@@ -100,6 +100,7 @@ app.get('/api', (req, res) => {
       analyze: '/api/processes/:processId/analyze',
       recommendations: '/api/processes/:processId/recommendations',
       targetProcess: '/api/processes/:processId/target',
+      admin: '/api/admin/*',
     },
   });
 });
