@@ -55,4 +55,10 @@ router.get(
   settingsController.fetchModelsForConfiguration
 );
 
+// POST /api/settings/update-password - Update user password
+router.post(
+  '/update-password',
+  settingsController.updatePassword
+);
+
 export default router;

@@ -229,10 +229,8 @@ export class BPMNService {
             description: typeof documentation === 'string' ? documentation : JSON.stringify(documentation),
             type: 'TASK',
             order: i,
-            position: {
-              x: 100 + i * 200,
-              y: 100,
-            },
+            positionX: 100 + i * 200,
+            positionY: 100,
           },
         });
 
