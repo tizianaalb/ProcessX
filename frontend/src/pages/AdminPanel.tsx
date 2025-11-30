@@ -380,6 +380,14 @@ const AdminPanel: React.FC = () => {
                   </button>
                 </div>
 
+                {/* Debug info */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2 mb-4">
+                    <strong>Debug:</strong> isSuperAdmin={isSuperAdmin ? 'true' : 'false'},
+                    organizations.length={organizations.length}
+                  </div>
+                )}
+
                 <form
                   onSubmit={editingUser ? handleUpdateUser : handleCreateUser}
                   className="space-y-4"
@@ -447,26 +455,32 @@ const AdminPanel: React.FC = () => {
                   </div>
 
                   {/* Organization selector (super admin only) */}
-                  {isSuperAdmin && organizations.length > 0 && (
+                  {isSuperAdmin && (
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        🏢 Organization
+                        🏢 Organization {organizations.length === 0 && '(Loading...)'}
                       </label>
-                      <select
-                        value={formData.organizationId}
-                        onChange={(e) =>
-                          setFormData({ ...formData, organizationId: e.target.value })
-                        }
-                        className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      >
-                        <option value="">Select Organization...</option>
-                        {organizations.map((org) => (
-                          <option key={org.id} value={org.id}>
-                            {org.name} ({org._count.users} users)
-                          </option>
-                        ))}
-                      </select>
+                      {organizations.length > 0 ? (
+                        <select
+                          value={formData.organizationId}
+                          onChange={(e) =>
+                            setFormData({ ...formData, organizationId: e.target.value })
+                          }
+                          className="w-full px-4 py-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        >
+                          <option value="">Select Organization...</option>
+                          {organizations.map((org) => (
+                            <option key={org.id} value={org.id}>
+                              {org.name} ({org._count.users} users)
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="w-full px-4 py-3 bg-gray-100 border-2 border-gray-300 rounded-xl text-gray-500">
+                          No organizations available. Please ensure organizations endpoint is working.
+                        </div>
+                      )}
                     </div>
                   )}
 
