@@ -55,6 +55,7 @@ const AdminPanel: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetPasswordValue, setShowResetPasswordValue] = useState(false);
   const [resetUserId, setResetUserId] = useState<string | null>(null);
   const [resetPasswordValue, setResetPasswordValue] = useState('');
 
@@ -256,6 +257,7 @@ const AdminPanel: React.FC = () => {
         setShowResetPassword(false);
         setResetUserId(null);
         setResetPasswordValue('');
+        setShowResetPasswordValue(false);
       } else {
         alert(`❌ ${data.error || 'Failed to reset password'}`);
       }
@@ -678,6 +680,7 @@ const AdminPanel: React.FC = () => {
                   setShowResetPassword(false);
                   setResetUserId(null);
                   setResetPasswordValue('');
+                  setShowResetPasswordValue(false);
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -689,14 +692,28 @@ const AdminPanel: React.FC = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 New Password (min 8 characters)
               </label>
-              <input
-                type="password"
-                value={resetPasswordValue}
-                onChange={(e) => setResetPasswordValue(e.target.value)}
-                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter new password"
-                minLength={8}
-              />
+              <div className="relative">
+                <input
+                  type={showResetPasswordValue ? 'text' : 'password'}
+                  value={resetPasswordValue}
+                  onChange={(e) => setResetPasswordValue(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter new password"
+                  minLength={8}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowResetPasswordValue(!showResetPasswordValue)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  title={showResetPasswordValue ? 'Hide password' : 'Show password'}
+                >
+                  {showResetPasswordValue ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -711,6 +728,7 @@ const AdminPanel: React.FC = () => {
                   setShowResetPassword(false);
                   setResetUserId(null);
                   setResetPasswordValue('');
+                  setShowResetPasswordValue(false);
                 }}
                 className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
               >
