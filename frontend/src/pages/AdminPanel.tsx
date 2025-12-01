@@ -16,6 +16,8 @@ import {
   UserCog,
 } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3100';
+
 interface User {
   id: string;
   email: string;
@@ -77,7 +79,7 @@ const AdminPanel: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3100/api/admin/users', {
+      const response = await fetch(`${API_URL}/api/admin/users`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
@@ -97,7 +99,7 @@ const AdminPanel: React.FC = () => {
 
   const fetchOrganizations = async () => {
     try {
-      const response = await fetch('http://localhost:3100/api/admin/organizations', {
+      const response = await fetch(`${API_URL}/api/admin/organizations`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
@@ -116,7 +118,7 @@ const AdminPanel: React.FC = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:3100/api/admin/users', {
+      const response = await fetch(`${API_URL}/api/admin/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +168,7 @@ const AdminPanel: React.FC = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3100/api/admin/users/${editingUser.id}`,
+        `${API_URL}/api/admin/users/${editingUser.id}`,
         {
           method: 'PATCH',
           headers: {
@@ -207,7 +209,7 @@ const AdminPanel: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3100/api/admin/users/${userId}`, {
+      const response = await fetch(`${API_URL}/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
@@ -236,7 +238,7 @@ const AdminPanel: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3100/api/admin/users/${userId}/reset-password`,
+        `${API_URL}/api/admin/users/${userId}/reset-password`,
         {
           method: 'POST',
           headers: {
