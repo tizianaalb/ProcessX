@@ -426,7 +426,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'super_admin') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
         <div className="max-w-4xl mx-auto">
@@ -494,7 +494,7 @@ const Settings: React.FC = () => {
 
           <div className="p-6">
             {/* Admin Permission Warning */}
-            {user && user.role !== 'admin' && (
+            {user && user.role !== 'admin' && user.role !== 'super_admin' && (
               <div className="mb-4 bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4">
                 <div className="flex items-start gap-3">
                   <div className="text-yellow-600 text-2xl">⚠️</div>
