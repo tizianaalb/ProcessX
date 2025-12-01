@@ -452,8 +452,15 @@ const AdminPanel: React.FC = () => {
                     >
                       <option value="user">👤 User</option>
                       <option value="admin">👑 Admin</option>
-                      <option value="super_admin">⭐ Super Admin</option>
+                      {isSuperAdmin && (
+                        <option value="super_admin">⭐ Super Admin</option>
+                      )}
                     </select>
+                    {!isSuperAdmin && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        ℹ️ Only super admins can create or manage super_admin accounts
+                      </p>
+                    )}
                   </div>
 
                   {/* Organization selector (super admin only) */}
@@ -604,26 +611,48 @@ const AdminPanel: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => {
+                            if (!isSuperAdmin && u.role === 'super_admin') return;
                             setResetUserId(u.id);
                             setShowResetPassword(true);
                           }}
-                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                          title="Reset password"
+                          className={`p-2 rounded-lg transition-colors ${
+                            !isSuperAdmin && u.role === 'super_admin'
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-orange-600 hover:bg-orange-50'
+                          }`}
+                          title={!isSuperAdmin && u.role === 'super_admin' ? 'Only super admins can manage super_admin accounts' : 'Reset password'}
+                          disabled={!isSuperAdmin && u.role === 'super_admin'}
                         >
                           <Key className="w-5 h-5" />
                         </button>
                         <button
-                          onClick={() => handleEditUser(u)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit user"
+                          onClick={() => {
+                            if (!isSuperAdmin && u.role === 'super_admin') return;
+                            handleEditUser(u);
+                          }}
+                          className={`p-2 rounded-lg transition-colors ${
+                            !isSuperAdmin && u.role === 'super_admin'
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-blue-600 hover:bg-blue-50'
+                          }`}
+                          title={!isSuperAdmin && u.role === 'super_admin' ? 'Only super admins can manage super_admin accounts' : 'Edit user'}
+                          disabled={!isSuperAdmin && u.role === 'super_admin'}
                         >
                           <Edit className="w-5 h-5" />
                         </button>
                         {u.id !== user?.userId && (
                           <button
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete user"
+                            onClick={() => {
+                              if (!isSuperAdmin && u.role === 'super_admin') return;
+                              handleDeleteUser(u.id);
+                            }}
+                            className={`p-2 rounded-lg transition-colors ${
+                              !isSuperAdmin && u.role === 'super_admin'
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : 'text-red-600 hover:bg-red-50'
+                            }`}
+                            title={!isSuperAdmin && u.role === 'super_admin' ? 'Only super admins can manage super_admin accounts' : 'Delete user'}
+                            disabled={!isSuperAdmin && u.role === 'super_admin'}
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>

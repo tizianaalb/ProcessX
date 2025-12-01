@@ -49,9 +49,13 @@ export const getUsers = async (req: Request, res: Response) => {
     }
 
     // Super admins can see all users across all organizations
+    // Regular admins can only see users in their org and cannot see super_admin accounts
     const whereClause = currentUser.role === 'super_admin'
       ? {}
-      : { organizationId: currentUser.organizationId };
+      : {
+          organizationId: currentUser.organizationId,
+          role: { not: 'super_admin' } // Regular admins cannot see super_admin accounts
+        };
 
     // Get users
     const users = await prisma.user.findMany({
@@ -111,6 +115,13 @@ export const createUser = async (req: Request, res: Response) => {
 
     // Validate request body
     const validatedData = createUserSchema.parse(req.body);
+
+    // Regular admins cannot create super_admin accounts
+    if (currentUser.role === 'admin' && validatedData.role === 'super_admin') {
+      return res.status(403).json({
+        error: 'Only super administrators can create super_admin accounts'
+      });
+    }
 
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
@@ -211,6 +222,20 @@ export const updateUser = async (req: Request, res: Response) => {
       });
     }
 
+    // Regular admins cannot edit super_admin accounts
+    if (currentUser.role === 'admin' && targetUser.role === 'super_admin') {
+      return res.status(403).json({
+        error: 'Only super administrators can edit super_admin accounts'
+      });
+    }
+
+    // Regular admins cannot promote users to super_admin
+    if (currentUser.role === 'admin' && validatedData.role === 'super_admin') {
+      return res.status(403).json({
+        error: 'Only super administrators can promote users to super_admin'
+      });
+    }
+
     // If email is being changed, check it doesn't already exist
     if (validatedData.email && validatedData.email !== targetUser.email) {
       const existingUser = await prisma.user.findUnique({
@@ -296,6 +321,13 @@ export const deleteUser = async (req: Request, res: Response) => {
         error: currentUser.role === 'super_admin'
           ? 'User not found'
           : 'User not found in your organization'
+      });
+    }
+
+    // Regular admins cannot delete super_admin accounts
+    if (currentUser.role === 'admin' && targetUser.role === 'super_admin') {
+      return res.status(403).json({
+        error: 'Only super administrators can delete super_admin accounts'
       });
     }
 
@@ -396,6 +428,13 @@ export const resetUserPassword = async (req: Request, res: Response) => {
         error: currentUser.role === 'super_admin'
           ? 'User not found'
           : 'User not found in your organization'
+      });
+    }
+
+    // Regular admins cannot reset passwords for super_admin accounts
+    if (currentUser.role === 'admin' && targetUser.role === 'super_admin') {
+      return res.status(403).json({
+        error: 'Only super administrators can reset passwords for super_admin accounts'
       });
     }
 
