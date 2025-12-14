@@ -25,6 +25,9 @@ router.delete('/users/:userId', adminController.deleteUser);
 // POST /api/admin/users/:userId/reset-password - Admin reset user password
 router.post('/users/:userId/reset-password', adminController.resetUserPassword);
 
+// POST /api/admin/upgrade-to-super-admin - Upgrade user to super_admin (admin can upgrade self)
+router.post('/upgrade-to-super-admin', adminController.upgradeToSuperAdmin);
+
 // POST /api/admin/seed-templates - Seed process templates (admin or super_admin)
 router.post('/seed-templates', adminController.seedTemplates);
 

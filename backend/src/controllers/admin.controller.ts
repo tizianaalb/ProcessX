@@ -514,6 +514,77 @@ export const getOrganizations = async (req: Request, res: Response) => {
 };
 
 /**
+ * Upgrade user to super_admin (admin only, for initial setup)
+ */
+export const upgradeToSuperAdmin = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Get current user and verify admin role
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, email: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Only allow admins to upgrade themselves to super_admin (for initial setup)
+    // Or allow existing super_admins to upgrade others
+    if (currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only administrators can upgrade users' });
+    }
+
+    // If admin, can only upgrade themselves
+    if (currentUser.role === 'admin' && currentUser.email !== email) {
+      return res.status(403).json({ error: 'Admins can only upgrade themselves to super_admin' });
+    }
+
+    // Find the target user
+    const targetUser = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'Target user not found' });
+    }
+
+    if (targetUser.role === 'super_admin') {
+      return res.json({
+        success: true,
+        message: 'User is already a super_admin',
+        user: targetUser,
+      });
+    }
+
+    // Upgrade to super_admin
+    const updatedUser = await prisma.user.update({
+      where: { email },
+      data: { role: 'super_admin' },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+    });
+
+    console.log(`✅ User upgraded to super_admin: ${updatedUser.email}`);
+
+    res.json({
+      success: true,
+      message: 'User upgraded to super_admin successfully',
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Upgrade to super_admin error:', error);
+    res.status(500).json({ error: 'Failed to upgrade user' });
+  }
+};
+
+/**
  * Seed templates (admin or super_admin)
  */
 export const seedTemplates = async (req: Request, res: Response) => {
