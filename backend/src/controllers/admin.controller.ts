@@ -647,26 +647,30 @@ export const createBackup = async (req: Request, res: Response) => {
       organizations,
       users,
       processes,
-      steps,
-      connections,
+      processSteps,
+      processConnections,
       painPoints,
       recommendations,
+      processRecommendations,
       targetProcesses,
       exports,
       processTemplates,
+      apiConfigurations,
       aiAnalyses,
       auditLogs,
     ] = await Promise.all([
       prisma.organization.findMany(),
       prisma.user.findMany({ select: { id: true, email: true, firstName: true, lastName: true, role: true, organizationId: true, createdAt: true, updatedAt: true } }),
       prisma.process.findMany(),
-      prisma.step.findMany(),
-      prisma.connection.findMany(),
+      prisma.processStep.findMany(),
+      prisma.processConnection.findMany(),
       prisma.painPoint.findMany(),
+      prisma.recommendation.findMany(),
       prisma.processRecommendation.findMany(),
       prisma.targetProcess.findMany(),
       prisma.export.findMany(),
       prisma.processTemplate.findMany(),
+      prisma.aPIConfiguration.findMany(),
       prisma.aIAnalysis.findMany(),
       prisma.auditLog.findMany(),
     ]);
@@ -678,13 +682,15 @@ export const createBackup = async (req: Request, res: Response) => {
         organizations: organizations.length,
         users: users.length,
         processes: processes.length,
-        steps: steps.length,
-        connections: connections.length,
+        processSteps: processSteps.length,
+        processConnections: processConnections.length,
         painPoints: painPoints.length,
         recommendations: recommendations.length,
+        processRecommendations: processRecommendations.length,
         targetProcesses: targetProcesses.length,
         exports: exports.length,
         processTemplates: processTemplates.length,
+        apiConfigurations: apiConfigurations.length,
         aiAnalyses: aiAnalyses.length,
         auditLogs: auditLogs.length,
       },
@@ -692,13 +698,15 @@ export const createBackup = async (req: Request, res: Response) => {
         organizations,
         users,
         processes,
-        steps,
-        connections,
+        processSteps,
+        processConnections,
         painPoints,
         recommendations,
+        processRecommendations,
         targetProcesses,
         exports,
         processTemplates,
+        apiConfigurations,
         aiAnalyses,
         auditLogs,
       },
@@ -759,11 +767,13 @@ export const restoreBackup = async (req: Request, res: Response) => {
       await prisma.$transaction(async (tx) => {
         await tx.auditLog.deleteMany({});
         await tx.aIAnalysis.deleteMany({});
+        await tx.aPIConfiguration.deleteMany({});
         await tx.export.deleteMany({});
         await tx.processRecommendation.deleteMany({});
+        await tx.recommendation.deleteMany({});
         await tx.painPoint.deleteMany({});
-        await tx.connection.deleteMany({});
-        await tx.step.deleteMany({});
+        await tx.processConnection.deleteMany({});
+        await tx.processStep.deleteMany({});
         await tx.targetProcess.deleteMany({});
         await tx.process.deleteMany({});
         await tx.processTemplate.deleteMany({});
@@ -854,11 +864,12 @@ export const restoreBackup = async (req: Request, res: Response) => {
           }
         }
 
-        // Restore steps
-        const stepCount = backup.data.steps?.length || 0;
+        // Restore process steps
+        const stepCount = backup.data.processSteps?.length || backup.data.steps?.length || 0;
+        const steps = backup.data.processSteps || backup.data.steps || [];
         if (stepCount > 0) {
-          for (const step of backup.data.steps) {
-            await tx.step.upsert({
+          for (const step of steps) {
+            await tx.processStep.upsert({
               where: { id: step.id },
               update: step,
               create: step,
@@ -866,11 +877,12 @@ export const restoreBackup = async (req: Request, res: Response) => {
           }
         }
 
-        // Restore connections
-        const connectionCount = backup.data.connections?.length || 0;
+        // Restore process connections
+        const connectionCount = backup.data.processConnections?.length || backup.data.connections?.length || 0;
+        const connections = backup.data.processConnections || backup.data.connections || [];
         if (connectionCount > 0) {
-          for (const connection of backup.data.connections) {
-            await tx.connection.upsert({
+          for (const connection of connections) {
+            await tx.processConnection.upsert({
               where: { id: connection.id },
               update: connection,
               create: connection,
@@ -894,10 +906,34 @@ export const restoreBackup = async (req: Request, res: Response) => {
         const recCount = backup.data.recommendations?.length || 0;
         if (recCount > 0) {
           for (const rec of backup.data.recommendations) {
+            await tx.recommendation.upsert({
+              where: { id: rec.id },
+              update: rec,
+              create: rec,
+            });
+          }
+        }
+
+        // Restore process recommendations
+        const processRecCount = backup.data.processRecommendations?.length || 0;
+        if (processRecCount > 0) {
+          for (const rec of backup.data.processRecommendations) {
             await tx.processRecommendation.upsert({
               where: { id: rec.id },
               update: rec,
               create: rec,
+            });
+          }
+        }
+
+        // Restore API configurations
+        const apiConfigCount = backup.data.apiConfigurations?.length || 0;
+        if (apiConfigCount > 0) {
+          for (const config of backup.data.apiConfigurations) {
+            await tx.aPIConfiguration.upsert({
+              where: { id: config.id },
+              update: config,
+              create: config,
             });
           }
         }
@@ -942,13 +978,15 @@ export const restoreBackup = async (req: Request, res: Response) => {
           organizations: orgCount,
           users: userCount,
           processes: processCount,
-          steps: stepCount,
-          connections: connectionCount,
+          processSteps: stepCount,
+          processConnections: connectionCount,
           painPoints: painPointCount,
           recommendations: recCount,
+          processRecommendations: processRecCount,
           targetProcesses: targetProcessCount,
           exports: exportCount,
           processTemplates: templateCount,
+          apiConfigurations: apiConfigCount,
           aiAnalyses: aiAnalysisCount,
           auditLogs: auditLogCount,
         };
