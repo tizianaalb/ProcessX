@@ -262,6 +262,8 @@ export interface GenerateProcessData {
   description: string;
   processType?: 'AS_IS' | 'TO_BE';
   industryContext?: string;
+  category?: string;
+  subcategory?: string;
   createImmediately?: boolean;
 }
 

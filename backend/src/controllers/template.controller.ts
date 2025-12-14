@@ -304,10 +304,45 @@ export const useTemplate = async (req: Request, res: Response): Promise<void> =>
       },
     });
 
+    // Analyze template layout and prepare position transformation
+    const positions = templateData.steps.map((s: any) => ({
+      x: s.position?.x || s.positionX || 0,
+      y: s.position?.y || s.positionY || 0,
+    }));
+
+    const xPositions = positions.map(p => p.x);
+    const yPositions = positions.map(p => p.y);
+    const xRange = Math.max(...xPositions) - Math.min(...xPositions);
+    const yRange = Math.max(...yPositions) - Math.min(...yPositions);
+
+    // If layout is horizontal (xRange > yRange), transform to vertical
+    const isHorizontal = xRange > yRange;
+
+    // Function to transform positions from horizontal to vertical layout
+    const transformPosition = (originalX: number, originalY: number) => {
+      if (!isHorizontal) {
+        // Already vertical, keep as-is
+        return { x: originalX, y: originalY };
+      }
+
+      // Transform horizontal to vertical:
+      // - Use original x-position for new y-position (main flow goes down)
+      // - Use original y-position for new x-position (branches spread horizontally)
+      // - Scale y-position to be more spread out vertically
+      const newX = originalY;
+      const newY = originalX;
+
+      return { x: newX, y: newY };
+    };
+
     // Create steps with ID mapping
     const stepIdMap = new Map<string, string>();
 
     for (const step of templateData.steps) {
+      const originalX = step.position?.x || step.positionX || 0;
+      const originalY = step.position?.y || step.positionY || 0;
+      const { x, y } = transformPosition(originalX, originalY);
+
       const createdStep = await prisma.processStep.create({
         data: {
           processId: process.id,
@@ -315,8 +350,8 @@ export const useTemplate = async (req: Request, res: Response): Promise<void> =>
           description: step.description || '',
           type: step.type,
           duration: step.duration || null,
-          positionX: step.position?.x || step.positionX || 0,
-          positionY: step.position?.y || step.positionY || 0,
+          positionX: x,
+          positionY: y,
           order: templateData.steps.indexOf(step),
           metadata: step.metadata || {},
         },

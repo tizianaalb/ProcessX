@@ -221,6 +221,7 @@ model ProcessTemplate {
   name            String
   description     String?
   category        String?
+  subcategory     String?
   industrySector  String    @default("insurance") @map("industry_sector")
   templateData    Json      @map("template_data") // full process structure
   previewImageUrl String?   @map("preview_image_url")

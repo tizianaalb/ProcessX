@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { X, FileText, Users, Clock, ChevronRight, Loader } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, FileText, Clock, Loader, ArrowLeft } from 'lucide-react';
 import { api } from '../lib/api';
 import type { ProcessTemplate } from '../lib/api';
 import { Button } from './ui/button';
+import { CategorySidebar } from './CategorySidebar';
+import { TemplateGrid } from './TemplateGrid';
+import { getCategoryLabel, getSubcategoryLabel } from '../config/templateCategories';
 
 interface TemplateGalleryProps {
   isOpen: boolean;
@@ -15,10 +18,11 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [templates, setTemplates] = useState<ProcessTemplate[]>([]);
+  const [allTemplates, setAllTemplates] = useState<ProcessTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ProcessTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -26,24 +30,63 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     if (isOpen) {
       loadTemplates();
     }
-  }, [isOpen, selectedCategory]);
+  }, [isOpen]);
 
   const loadTemplates = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const params = selectedCategory !== 'all' ? { category: selectedCategory } : undefined;
-      const result = await api.getTemplates(params);
+      const result = await api.getTemplates();
 
       if (result.success) {
-        setTemplates(result.templates);
+        setAllTemplates(result.templates);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load templates');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Calculate template counts for sidebar
+  const templateCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+
+    allTemplates.forEach((template) => {
+      // Count by category
+      if (template.category) {
+        counts[template.category] = (counts[template.category] || 0) + 1;
+
+        // Count by subcategory
+        if (template.subcategory) {
+          const key = `${template.category}_${template.subcategory}`;
+          counts[key] = (counts[key] || 0) + 1;
+        }
+      }
+    });
+
+    return counts;
+  }, [allTemplates]);
+
+  // Filter templates based on selection
+  const filteredTemplates = useMemo(() => {
+    if (!selectedCategory) {
+      return allTemplates;
+    }
+
+    if (selectedSubcategory) {
+      return allTemplates.filter(
+        (t) => t.category === selectedCategory && t.subcategory === selectedSubcategory
+      );
+    }
+
+    return allTemplates.filter((t) => t.category === selectedCategory);
+  }, [allTemplates, selectedCategory, selectedSubcategory]);
+
+  const handleCategorySelect = (categoryKey: string | null, subcategoryKey: string | null) => {
+    setSelectedCategory(categoryKey);
+    setSelectedSubcategory(subcategoryKey);
   };
 
   const handleUseTemplate = async () => {
@@ -68,31 +111,19 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
 
   const handleClose = () => {
     setSelectedTemplate(null);
-    setSelectedCategory('all');
+    setSelectedCategory(null);
+    setSelectedSubcategory(null);
     setError(null);
     onClose();
   };
-
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      claims: 'Claims Processing',
-      underwriting: 'Underwriting',
-      policy: 'Policy Management',
-      customer: 'Customer Service',
-      billing: 'Billing & Payments',
-    };
-    return labels[category] || category;
-  };
-
-  const filteredTemplates = templates;
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto m-4">
+      <div className="bg-white rounded-xl shadow-2xl w-[95%] max-w-[1400px] h-[90vh] flex flex-col overflow-hidden m-4">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-cyan-600 p-6 flex items-center justify-between border-b border-blue-700">
+        <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6 flex items-center justify-between border-b border-blue-700 flex-shrink-0">
           <div className="flex items-center gap-3">
             <FileText className="w-6 h-6 text-blue-100" />
             <h2 className="text-2xl font-bold text-white">
@@ -108,134 +139,52 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
           </button>
         </div>
 
-        <div className="p-6">
-          {/* Category Filter */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Filter by Category
-            </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              disabled={loading}
-            >
-              <option value="all">All Categories</option>
-              <option value="claims">Claims Processing</option>
-              <option value="underwriting">Underwriting</option>
-              <option value="policy">Policy Management</option>
-              <option value="customer">Customer Service</option>
-              <option value="billing">Billing & Payments</option>
-            </select>
+        {/* Error State */}
+        {error && (
+          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex-shrink-0">
+            <div className="text-sm text-red-800">{error}</div>
           </div>
+        )}
 
-          {/* Loading State */}
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader className="w-8 h-8 text-blue-600 animate-spin" />
-            </div>
-          )}
+        {/* Main Content - Two Column Layout or Detail View */}
+        {!selectedTemplate ? (
+          <div className="flex flex-1 overflow-hidden">
+            {/* Loading State */}
+            {loading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Left Sidebar - Categories */}
+                <CategorySidebar
+                  selectedCategory={selectedCategory}
+                  selectedSubcategory={selectedSubcategory}
+                  onCategorySelect={handleCategorySelect}
+                  templateCounts={templateCounts}
+                />
 
-          {/* Error State */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="text-sm text-red-800">{error}</div>
-            </div>
-          )}
+                {/* Right Content - Template Grid */}
+                <TemplateGrid
+                  templates={filteredTemplates}
+                  onTemplateSelect={setSelectedTemplate}
+                  onTemplatePreview={setSelectedTemplate}
+                />
+              </>
+            )}
+          </div>
+        ) : (
+          /* Template Detail View */
+          <div className="flex-1 overflow-y-auto p-6">
+            <button
+              onClick={() => setSelectedTemplate(null)}
+              className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2 mb-6 transition-colors"
+            >
+              <ArrowLeft size={20} />
+              Back to templates
+            </button>
 
-          {/* Template List */}
-          {!loading && !selectedTemplate && (
-            <>
-              {filteredTemplates.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 text-lg">
-                    No templates found in this category
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredTemplates.map((template) => (
-                    <div
-                      key={template.id}
-                      className="bg-white border-2 border-gray-200 rounded-lg p-5 hover:border-blue-500 hover:shadow-lg transition-all cursor-pointer"
-                      onClick={() => setSelectedTemplate(template)}
-                    >
-                      <div className="flex items-start gap-4">
-                        {/* Left side - Icon/Stats */}
-                        <div className="flex-shrink-0">
-                          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                            <FileText className="w-8 h-8 text-white" />
-                          </div>
-                          <div className="mt-2 text-center">
-                            <div className="text-xs text-gray-500">Uses</div>
-                            <div className="text-sm font-bold text-gray-900">{template.usageCount}</div>
-                          </div>
-                        </div>
-
-                        {/* Middle - Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <h3 className="text-xl font-bold text-gray-900">
-                              {template.name}
-                            </h3>
-                            {template.category && (
-                              <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full whitespace-nowrap">
-                                {getCategoryLabel(template.category)}
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                            {template.description}
-                          </p>
-
-                          <div className="flex items-center gap-6 text-sm text-gray-500">
-                            <div className="flex items-center gap-2">
-                              <FileText size={16} className="text-blue-600" />
-                              <span className="font-medium">{template.templateData.steps.length} steps</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock size={16} className="text-cyan-600" />
-                              <span className="font-medium">
-                                {template.templateData.steps.reduce((sum: number, step: any) => sum + (step.duration || 0), 0)} min total
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right side - Action Button */}
-                        <div className="flex-shrink-0 flex items-center">
-                          <Button
-                            variant="outline"
-                            className="flex items-center gap-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTemplate(template);
-                            }}
-                          >
-                            View Details
-                            <ChevronRight size={16} />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Template Detail View */}
-          {selectedTemplate && (
             <div>
-              <div className="mb-6">
-                <button
-                  onClick={() => setSelectedTemplate(null)}
-                  className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 mb-4"
-                >
-                  ← Back to templates
-                </button>
 
                 <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-6 mb-6">
                   <div className="flex items-start justify-between mb-3">
@@ -315,9 +264,8 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                     ))}
                   </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-3 mt-6">
                 <Button
                   onClick={() => setSelectedTemplate(null)}
                   variant="outline"
@@ -344,8 +292,8 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({
                 </Button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

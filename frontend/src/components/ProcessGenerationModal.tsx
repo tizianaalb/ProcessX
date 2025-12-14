@@ -3,6 +3,7 @@ import { X, Sparkles, AlertCircle, CheckCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import type { GeneratedProcessPreview } from '../lib/api';
 import { Button } from './ui/button';
+import { getCategoriesSorted } from '../config/templateCategories';
 
 interface ProcessGenerationModalProps {
   isOpen: boolean;
@@ -18,10 +19,21 @@ const ProcessGenerationModal: React.FC<ProcessGenerationModalProps> = ({
   const [description, setDescription] = useState('');
   const [processType, setProcessType] = useState<'AS_IS' | 'TO_BE'>('AS_IS');
   const [industryContext, setIndustryContext] = useState('insurance');
+  const [category, setCategory] = useState<string>('');
+  const [subcategory, setSubcategory] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<GeneratedProcessPreview | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+
+  const categories = getCategoriesSorted();
+  const selectedCategoryObj = categories.find((c) => c.key === category);
+  const subcategories = selectedCategoryObj?.subcategories || [];
+
+  const handleCategoryChange = (newCategory: string) => {
+    setCategory(newCategory);
+    setSubcategory(''); // Reset subcategory when category changes
+  };
 
   const handleGenerate = async () => {
     if (description.length < 50) {
@@ -37,6 +49,8 @@ const ProcessGenerationModal: React.FC<ProcessGenerationModalProps> = ({
         description,
         processType,
         industryContext,
+        category: category || undefined,
+        subcategory: subcategory || undefined,
         createImmediately: false,
       });
 
@@ -61,6 +75,8 @@ const ProcessGenerationModal: React.FC<ProcessGenerationModalProps> = ({
         description,
         processType,
         industryContext,
+        category: category || undefined,
+        subcategory: subcategory || undefined,
         createImmediately: true,
       });
 
@@ -79,6 +95,8 @@ const ProcessGenerationModal: React.FC<ProcessGenerationModalProps> = ({
     setDescription('');
     setProcessType('AS_IS');
     setIndustryContext('insurance');
+    setCategory('');
+    setSubcategory('');
     setPreview(null);
     setError(null);
     onClose();
@@ -172,6 +190,46 @@ const ProcessGenerationModal: React.FC<ProcessGenerationModalProps> = ({
                     <option value="manufacturing">Manufacturing</option>
                     <option value="technology">Technology</option>
                     <option value="general">General Business</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Category (Optional)
+                    <span className="ml-1 text-xs font-normal text-gray-500">- Helps AI generate more specific processes</span>
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                    disabled={isGenerating}
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map((cat) => (
+                      <option key={cat.key} value={cat.key}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Subcategory (Optional)
+                    <span className="ml-1 text-xs font-normal text-gray-500">- Further refine context</span>
+                  </label>
+                  <select
+                    value={subcategory}
+                    onChange={(e) => setSubcategory(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                    disabled={isGenerating || !category}
+                  >
+                    <option value="">All Subcategories</option>
+                    {subcategories.map((sub) => (
+                      <option key={sub.key} value={sub.key}>
+                        {sub.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

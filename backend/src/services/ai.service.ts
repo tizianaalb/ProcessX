@@ -365,13 +365,38 @@ Return your recommendations in the following JSON format:
   }
 
   /**
+   * Get category-specific context for AI prompts
+   */
+  private static getCategoryContext(category?: string, subcategory?: string): string {
+    const categoryContexts: Record<string, string> = {
+      underwriting: "underwriting operations including risk assessment, policy pricing, approval workflows, and renewal processing",
+      claims: "claims management including intake, investigation, adjuster assignment, settlement, and fraud detection",
+      reinsurance: "reinsurance operations including treaty placement, administration, reporting, and recovery processes",
+      customer_service: "customer service operations including onboarding, support ticketing, policy servicing, and satisfaction",
+      financial: "financial management including premium billing, financial reporting, investment portfolio management, and reconciliation",
+      compliance: "compliance and risk management including regulatory compliance, risk monitoring, internal audits, and governance",
+      marketing: "marketing and sales operations including market research, product development, sales management, and lead generation",
+      it_data: "IT and data management including system maintenance, data analysis, cybersecurity, and technology infrastructure",
+      hr: "human resources operations including recruitment, training and development, performance management, and employee relations",
+    };
+
+    if (!category) {
+      return "insurance operations";
+    }
+
+    return categoryContexts[category] || "insurance operations";
+  }
+
+  /**
    * Generate a complete process from a natural language description
    */
   static async generateProcessFromDescription(
     organizationId: string,
     description: string,
     processType: 'AS_IS' | 'TO_BE' = 'AS_IS',
-    industryContext: string = 'insurance'
+    industryContext: string = 'insurance',
+    category?: string,
+    subcategory?: string
   ): Promise<{
     name: string;
     description: string;
@@ -394,19 +419,22 @@ Return your recommendations in the following JSON format:
       type: 'DEFAULT' | 'CONDITIONAL';
     }>;
   }> {
-    const prompt = `You are an expert business process designer specializing in ${industryContext} industry operations. Based on the following description, design a complete, detailed business process.
+    const categoryContext = this.getCategoryContext(category, subcategory);
+    const categorySpecificText = category ? ` focusing on ${categoryContext}` : '';
+
+    const prompt = `You are an expert business process designer specializing in ${industryContext} industry operations${categorySpecificText}. Based on the following description, design a complete, detailed business process.
 
 Process Type: ${processType}
-Description: ${description}
+Description: ${description}${category ? `\nCategory: ${category}` : ''}${subcategory ? `\nSubcategory: ${subcategory}` : ''}
 
 Design a comprehensive business process that:
-1. Captures all key steps and activities
+1. Captures all key steps and activities specific to ${categoryContext}
 2. Includes proper flow with start and end events
 3. Identifies decision points where applicable
 4. Estimates realistic durations for each step
-5. Specifies responsible roles and departments
-6. Identifies required systems/tools
-7. Uses industry-standard ${industryContext} terminology
+5. Specifies responsible roles and departments relevant to ${category || industryContext}
+6. Identifies required systems/tools commonly used in ${categoryContext}
+7. Uses industry-standard ${industryContext} terminology and best practices for ${categoryContext}
 
 Guidelines:
 - Create 5-15 process steps (optimal range for clarity)
