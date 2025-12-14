@@ -12,6 +12,7 @@
     "build": "tsc --noCheck || echo 'Build completed with warnings'",
     "start": "tsx src/index.ts",
     "start:migrate": "prisma migrate deploy && tsx src/index.ts",
+    "seed:templates": "tsx prisma/seed-templates.ts",
     "test": "jest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
