@@ -172,20 +172,33 @@ export const updateTemplate = async (req: Request, res: Response): Promise<void>
   try {
     const { id } = req.params;
     const organizationId = req.user!.organizationId;
+    const userRole = req.user!.role;
     const validatedData = updateTemplateSchema.parse(req.body);
 
-    // Check if template exists and user has permission
-    const existingTemplate = await prisma.processTemplate.findFirst({
-      where: {
-        id,
-        organizationId, // Only allow updating own organization's templates
-      },
+    // Check if template exists
+    const existingTemplate = await prisma.processTemplate.findUnique({
+      where: { id },
     });
 
     if (!existingTemplate) {
       res.status(404).json({
         success: false,
-        error: 'Template not found or you do not have permission to update it',
+        error: 'Template not found',
+      });
+      return;
+    }
+
+    // Check permissions:
+    // - Admins and super_admins can update public templates (organizationId: null)
+    // - Users can only update their own organization's templates
+    const canUpdate =
+      existingTemplate.organizationId === organizationId || // Own org's template
+      (existingTemplate.organizationId === null && (userRole === 'admin' || userRole === 'super_admin')); // Public template + admin
+
+    if (!canUpdate) {
+      res.status(403).json({
+        success: false,
+        error: 'You do not have permission to update this template',
       });
       return;
     }
