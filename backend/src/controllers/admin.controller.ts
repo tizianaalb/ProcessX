@@ -715,11 +715,17 @@ export const createBackup = async (req: Request, res: Response) => {
     console.log('✅ Backup created successfully');
     console.log('📊 Total records:', Object.values(backup.counts).reduce((a, b) => a + b, 0));
 
-    res.json({
+    // Convert BigInt values to strings for JSON serialization
+    const backupString = JSON.stringify(backup, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    );
+
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({
       success: true,
       message: 'Backup created successfully',
-      backup,
-    });
+      backup: JSON.parse(backupString),
+    }));
   } catch (error) {
     console.error('Create backup error:', error);
     res.status(500).json({ error: 'Failed to create backup' });
