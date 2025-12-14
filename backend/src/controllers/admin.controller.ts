@@ -514,13 +514,13 @@ export const getOrganizations = async (req: Request, res: Response) => {
 };
 
 /**
- * Seed templates (super_admin only)
+ * Seed templates (admin or super_admin)
  */
 export const seedTemplates = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.userId;
 
-    // Get user and verify super_admin role
+    // Get user and verify admin role
     const currentUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true },
@@ -530,8 +530,8 @@ export const seedTemplates = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (currentUser.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Only super administrators can seed templates' });
+    if (currentUser.role !== 'admin' && currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only administrators can seed templates' });
     }
 
     // Import and run the seed script
