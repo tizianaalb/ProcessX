@@ -547,3 +547,359 @@ export const seedTemplates = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to seed templates' });
   }
 };
+
+/**
+ * Create database backup (super_admin only)
+ */
+export const createBackup = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    // Get user and verify super_admin role
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super administrators can create backups' });
+    }
+
+    console.log('🔄 Creating database backup...');
+
+    // Fetch all data
+    const [
+      organizations,
+      users,
+      processes,
+      steps,
+      connections,
+      painPoints,
+      recommendations,
+      targetProcesses,
+      exports,
+      processTemplates,
+      aiAnalyses,
+      auditLogs,
+    ] = await Promise.all([
+      prisma.organization.findMany(),
+      prisma.user.findMany({ select: { id: true, email: true, firstName: true, lastName: true, role: true, organizationId: true, createdAt: true, updatedAt: true } }),
+      prisma.process.findMany(),
+      prisma.step.findMany(),
+      prisma.connection.findMany(),
+      prisma.painPoint.findMany(),
+      prisma.processRecommendation.findMany(),
+      prisma.targetProcess.findMany(),
+      prisma.export.findMany(),
+      prisma.processTemplate.findMany(),
+      prisma.aIAnalysis.findMany(),
+      prisma.auditLog.findMany(),
+    ]);
+
+    const backup = {
+      version: '1.0',
+      timestamp: new Date().toISOString(),
+      counts: {
+        organizations: organizations.length,
+        users: users.length,
+        processes: processes.length,
+        steps: steps.length,
+        connections: connections.length,
+        painPoints: painPoints.length,
+        recommendations: recommendations.length,
+        targetProcesses: targetProcesses.length,
+        exports: exports.length,
+        processTemplates: processTemplates.length,
+        aiAnalyses: aiAnalyses.length,
+        auditLogs: auditLogs.length,
+      },
+      data: {
+        organizations,
+        users,
+        processes,
+        steps,
+        connections,
+        painPoints,
+        recommendations,
+        targetProcesses,
+        exports,
+        processTemplates,
+        aiAnalyses,
+        auditLogs,
+      },
+    };
+
+    console.log('✅ Backup created successfully');
+    console.log('📊 Total records:', Object.values(backup.counts).reduce((a, b) => a + b, 0));
+
+    res.json({
+      success: true,
+      message: 'Backup created successfully',
+      backup,
+    });
+  } catch (error) {
+    console.error('Create backup error:', error);
+    res.status(500).json({ error: 'Failed to create backup' });
+  }
+};
+
+/**
+ * Restore database from backup (super_admin only)
+ */
+export const restoreBackup = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { backup, mode } = req.body; // mode: 'merge' or 'overwrite'
+
+    if (!backup || !backup.data) {
+      return res.status(400).json({ error: 'Invalid backup data' });
+    }
+
+    if (!mode || !['merge', 'overwrite'].includes(mode)) {
+      return res.status(400).json({ error: 'Invalid restore mode. Use "merge" or "overwrite"' });
+    }
+
+    // Get user and verify super_admin role
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super administrators can restore backups' });
+    }
+
+    console.log(`🔄 Restoring database backup (mode: ${mode})...`);
+    console.log(`📦 Backup version: ${backup.version}`);
+    console.log(`📅 Backup date: ${backup.timestamp}`);
+
+    if (mode === 'overwrite') {
+      console.log('⚠️  OVERWRITE MODE: Deleting existing data...');
+
+      // Delete all existing data in reverse dependency order
+      await prisma.$transaction(async (tx) => {
+        await tx.auditLog.deleteMany({});
+        await tx.aIAnalysis.deleteMany({});
+        await tx.export.deleteMany({});
+        await tx.processRecommendation.deleteMany({});
+        await tx.painPoint.deleteMany({});
+        await tx.connection.deleteMany({});
+        await tx.step.deleteMany({});
+        await tx.targetProcess.deleteMany({});
+        await tx.process.deleteMany({});
+        await tx.processTemplate.deleteMany({});
+        await tx.user.deleteMany({});
+        await tx.organization.deleteMany({});
+      });
+
+      console.log('✅ Existing data deleted');
+    }
+
+    console.log('📥 Importing backup data...');
+
+    // Restore data in correct dependency order
+    let result;
+    try {
+      result = await prisma.$transaction(async (tx) => {
+        // Restore organizations
+        const orgCount = backup.data.organizations?.length || 0;
+        if (orgCount > 0) {
+          for (const org of backup.data.organizations) {
+            await tx.organization.upsert({
+              where: { id: org.id },
+              update: org,
+              create: org,
+            });
+          }
+        }
+
+        // Restore users (without passwords - they'll need to reset)
+        const userCount = backup.data.users?.length || 0;
+        if (userCount > 0) {
+          for (const user of backup.data.users) {
+            await tx.user.upsert({
+              where: { id: user.id },
+              update: {
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                organizationId: user.organizationId,
+              },
+              create: {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                organizationId: user.organizationId,
+                passwordHash: '$2b$10$dummyHashForRestoredUsers', // Dummy hash - users must reset password
+              },
+            });
+          }
+        }
+
+        // Restore process templates
+        const templateCount = backup.data.processTemplates?.length || 0;
+        if (templateCount > 0) {
+          for (const template of backup.data.processTemplates) {
+            await tx.processTemplate.upsert({
+              where: { id: template.id },
+              update: template,
+              create: template,
+            });
+          }
+        }
+
+        // Restore processes
+        const processCount = backup.data.processes?.length || 0;
+        if (processCount > 0) {
+          for (const process of backup.data.processes) {
+            await tx.process.upsert({
+              where: { id: process.id },
+              update: process,
+              create: process,
+            });
+          }
+        }
+
+        // Restore target processes
+        const targetProcessCount = backup.data.targetProcesses?.length || 0;
+        if (targetProcessCount > 0) {
+          for (const targetProcess of backup.data.targetProcesses) {
+            await tx.targetProcess.upsert({
+              where: { id: targetProcess.id },
+              update: targetProcess,
+              create: targetProcess,
+            });
+          }
+        }
+
+        // Restore steps
+        const stepCount = backup.data.steps?.length || 0;
+        if (stepCount > 0) {
+          for (const step of backup.data.steps) {
+            await tx.step.upsert({
+              where: { id: step.id },
+              update: step,
+              create: step,
+            });
+          }
+        }
+
+        // Restore connections
+        const connectionCount = backup.data.connections?.length || 0;
+        if (connectionCount > 0) {
+          for (const connection of backup.data.connections) {
+            await tx.connection.upsert({
+              where: { id: connection.id },
+              update: connection,
+              create: connection,
+            });
+          }
+        }
+
+        // Restore pain points
+        const painPointCount = backup.data.painPoints?.length || 0;
+        if (painPointCount > 0) {
+          for (const painPoint of backup.data.painPoints) {
+            await tx.painPoint.upsert({
+              where: { id: painPoint.id },
+              update: painPoint,
+              create: painPoint,
+            });
+          }
+        }
+
+        // Restore recommendations
+        const recCount = backup.data.recommendations?.length || 0;
+        if (recCount > 0) {
+          for (const rec of backup.data.recommendations) {
+            await tx.processRecommendation.upsert({
+              where: { id: rec.id },
+              update: rec,
+              create: rec,
+            });
+          }
+        }
+
+        // Restore exports
+        const exportCount = backup.data.exports?.length || 0;
+        if (exportCount > 0) {
+          for (const exp of backup.data.exports) {
+            await tx.export.upsert({
+              where: { id: exp.id },
+              update: exp,
+              create: exp,
+            });
+          }
+        }
+
+        // Restore AI analyses
+        const aiAnalysisCount = backup.data.aiAnalyses?.length || 0;
+        if (aiAnalysisCount > 0) {
+          for (const analysis of backup.data.aiAnalyses) {
+            await tx.aIAnalysis.upsert({
+              where: { id: analysis.id },
+              update: analysis,
+              create: analysis,
+            });
+          }
+        }
+
+        // Restore audit logs
+        const auditLogCount = backup.data.auditLogs?.length || 0;
+        if (auditLogCount > 0) {
+          for (const log of backup.data.auditLogs) {
+            await tx.auditLog.upsert({
+              where: { id: log.id },
+              update: log,
+              create: log,
+            });
+          }
+        }
+
+        return {
+          organizations: orgCount,
+          users: userCount,
+          processes: processCount,
+          steps: stepCount,
+          connections: connectionCount,
+          painPoints: painPointCount,
+          recommendations: recCount,
+          targetProcesses: targetProcessCount,
+          exports: exportCount,
+          processTemplates: templateCount,
+          aiAnalyses: aiAnalysisCount,
+          auditLogs: auditLogCount,
+        };
+      });
+
+      console.log('✅ Database restore completed successfully');
+      console.log('📊 Restored records:', result);
+
+      res.json({
+        success: true,
+        message: `Database restored successfully in ${mode} mode`,
+        restored: result,
+      });
+    } catch (error) {
+      console.error('Restore transaction failed:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Restore backup error:', error);
+    res.status(500).json({
+      error: 'Failed to restore backup',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};

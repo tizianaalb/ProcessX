@@ -28,4 +28,10 @@ router.post('/users/:userId/reset-password', adminController.resetUserPassword);
 // POST /api/admin/seed-templates - Seed process templates (admin or super_admin)
 router.post('/seed-templates', adminController.seedTemplates);
 
+// POST /api/admin/backup - Create database backup (super_admin only)
+router.post('/backup', adminController.createBackup);
+
+// POST /api/admin/restore - Restore database from backup (super_admin only)
+router.post('/restore', adminController.restoreBackup);
+
 export default router;
