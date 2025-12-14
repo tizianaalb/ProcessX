@@ -59,6 +59,16 @@ uploads/
 exports/
 temp/
 
+# Backups
+backups/
+**/backups/
+*.backup
+
+# Office documents
+*.docx
+*.xlsx
+*.pptx
+
 # OS
 .DS_Store
 Thumbs.db
