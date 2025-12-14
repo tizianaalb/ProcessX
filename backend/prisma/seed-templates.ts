@@ -3638,6 +3638,9 @@ export async function seedTemplates() {
   console.log('✨ Template seeding complete!');
 }
 
+// Export as default for dynamic import
+export default seedTemplates;
+
 // Run if executed directly (ES module way)
 const isMainModule = import.meta.url === `file://${process.argv[1]}`;
 if (isMainModule) {

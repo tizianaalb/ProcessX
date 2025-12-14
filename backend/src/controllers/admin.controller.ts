@@ -512,3 +512,38 @@ export const getOrganizations = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch organizations' });
   }
 };
+
+/**
+ * Seed templates (super_admin only)
+ */
+export const seedTemplates = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    // Get user and verify super_admin role
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super administrators can seed templates' });
+    }
+
+    // Import and run the seed script
+    const { default: runSeed } = await import('../../prisma/seed-templates.js');
+    await runSeed();
+
+    res.json({
+      success: true,
+      message: 'Templates seeded successfully',
+    });
+  } catch (error) {
+    console.error('Seed templates error:', error);
+    res.status(500).json({ error: 'Failed to seed templates' });
+  }
+};
