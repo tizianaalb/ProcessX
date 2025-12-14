@@ -46,6 +46,7 @@ model User {
   auditLogs            AuditLog[]
   initiatedAnalyses    AIAnalysis[]
   approvedRecommendations ProcessRecommendation[] @relation("ApprovedRecommendations")
+  backups              Backup[]
 
   @@index([organizationId])
   @@index([email])
@@ -363,4 +364,21 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+// Database Backups
+model Backup {
+  id          String    @id @default(uuid())
+  filename    String    @unique
+  filepath    String    // Path to backup file on server
+  fileSize    BigInt    @map("file_size") // File size in bytes
+  metadata    Json      // Backup metadata (version, timestamp, stats, etc.)
+  createdBy   String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User @relation(fields: [createdBy], references: [id])
+
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("backups")
 }

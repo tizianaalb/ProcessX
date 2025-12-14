@@ -65,11 +65,15 @@ const AdminPanel: React.FC = () => {
 
   // Backup/Restore state
   const [showBackupRestore, setShowBackupRestore] = useState(false);
+  const [showBackupHistory, setShowBackupHistory] = useState(false);
   const [backupData, setBackupData] = useState<any>(null);
   const [restoreMode, setRestoreMode] = useState<'merge' | 'overwrite'>('merge');
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [backupFile, setBackupFile] = useState<File | null>(null);
+  const [serverBackups, setServerBackups] = useState<any[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [selectedServerBackup, setSelectedServerBackup] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -306,20 +310,11 @@ const AdminPanel: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Download backup as JSON file
-        const blob = new Blob([JSON.stringify(data.backup, null, 2)], {
-          type: 'application/json',
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `processx-backup-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        alert('✅ Backup created and downloaded successfully!');
+        alert(`✅ Backup created successfully!\n\nFilename: ${data.backup.filename}\nSize: ${data.backup.fileSizeFormatted}\nTotal records: ${Object.values(data.backup.stats).reduce((a: number, b: any) => a + Number(b), 0)}`);
+        // Refresh backup history if modal is open
+        if (showBackupHistory) {
+          fetchBackupHistory();
+        }
       } else {
         alert(`❌ ${data.error || 'Failed to create backup'}`);
       }
@@ -328,6 +323,132 @@ const AdminPanel: React.FC = () => {
       alert('❌ Failed to create backup');
     } finally {
       setIsCreatingBackup(false);
+    }
+  };
+
+  const fetchBackupHistory = async () => {
+    setLoadingBackups(true);
+    try {
+      const response = await fetch(`${API_URL}/api/admin/backup/history`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setServerBackups(data.backups);
+      } else {
+        alert(`❌ ${data.error || 'Failed to fetch backup history'}`);
+      }
+    } catch (error) {
+      console.error('Failed to fetch backup history:', error);
+      alert('❌ Failed to fetch backup history');
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
+
+  const handleDownloadBackup = async (backupId: string, filename: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/backup/${backupId}/download`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('✅ Backup downloaded successfully!');
+      } else {
+        const data = await response.json();
+        alert(`❌ ${data.error || 'Failed to download backup'}`);
+      }
+    } catch (error) {
+      console.error('Failed to download backup:', error);
+      alert('❌ Failed to download backup');
+    }
+  };
+
+  const handleDeleteBackup = async (backupId: string, filename: string) => {
+    if (!confirm(`Are you sure you want to delete backup "${filename}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/admin/backup/${backupId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('✅ Backup deleted successfully!');
+        fetchBackupHistory();
+      } else {
+        alert(`❌ ${data.error || 'Failed to delete backup'}`);
+      }
+    } catch (error) {
+      console.error('Failed to delete backup:', error);
+      alert('❌ Failed to delete backup');
+    }
+  };
+
+  const handleRestoreFromServer = async (backupId: string, filename: string) => {
+    const confirmMessage =
+      restoreMode === 'overwrite'
+        ? `⚠️ WARNING: This will DELETE ALL existing data and replace it with the backup "${filename}".\n\nThis action cannot be undone!\n\nAre you absolutely sure you want to continue?`
+        : `This will merge the backup "${filename}" with existing data. Existing records with the same IDs will be updated.\n\nAre you sure you want to continue?`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    if (restoreMode === 'overwrite' && !confirm('⚠️ FINAL WARNING: All current data will be PERMANENTLY DELETED. Click OK to proceed.')) {
+      return;
+    }
+
+    setIsRestoring(true);
+    try {
+      const response = await fetch(`${API_URL}/api/admin/backup/${backupId}/restore`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: JSON.stringify({
+          mode: restoreMode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`✅ ${data.message}\n\nRestored records:\n${JSON.stringify(data.restored, null, 2)}`);
+        setShowBackupHistory(false);
+        setSelectedServerBackup(null);
+        // Refresh the page to show updated data
+        window.location.reload();
+      } else {
+        alert(`❌ ${data.error || 'Failed to restore backup'}\n${data.details || ''}`);
+      }
+    } catch (error) {
+      console.error('Failed to restore from server backup:', error);
+      alert('❌ Failed to restore from server backup');
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -806,7 +927,7 @@ const AdminPanel: React.FC = () => {
             </div>
 
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Create Backup Card */}
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
                   <div className="flex items-center gap-3 mb-4">
@@ -815,12 +936,12 @@ const AdminPanel: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">Create Backup</h3>
-                      <p className="text-sm text-gray-600">Export all database data</p>
+                      <p className="text-sm text-gray-600">Save to server</p>
                     </div>
                   </div>
 
                   <p className="text-sm text-gray-700 mb-4">
-                    Download a complete backup of all data including users, processes, templates, and more.
+                    Create a complete backup of all data and save it on the server.
                   </p>
 
                   <button
@@ -835,38 +956,70 @@ const AdminPanel: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <Download className="w-5 h-5" />
-                        Create & Download Backup
+                        <Save className="w-5 h-5" />
+                        Create Backup
                       </>
                     )}
                   </button>
                 </div>
 
-                {/* Restore Backup Card */}
+                {/* View Backups Card */}
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                      <Database className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">View Backups</h3>
+                      <p className="text-sm text-gray-600">Manage server backups</p>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-gray-700 mb-4">
+                    View, download, restore, or delete backups stored on the server.
+                  </p>
+
+                  <button
+                    onClick={() => {
+                      setShowBackupHistory(true);
+                      fetchBackupHistory();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+                  >
+                    <Database className="w-5 h-5" />
+                    View Backups
+                  </button>
+                </div>
+
+                {/* Restore from File Card */}
                 <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-6 border-2 border-orange-200">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
                       <Upload className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Restore Backup</h3>
-                      <p className="text-sm text-gray-600">Import data from backup file</p>
+                      <h3 className="text-lg font-bold text-gray-900">Upload & Restore</h3>
+                      <p className="text-sm text-gray-600">From local file</p>
                     </div>
                   </div>
+
+                  <p className="text-sm text-gray-700 mb-4">
+                    Upload and restore a backup file from your computer.
+                  </p>
 
                   <button
                     onClick={() => setShowBackupRestore(true)}
                     className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
                   >
                     <Upload className="w-5 h-5" />
-                    Restore from Backup
+                    Upload Backup
                   </button>
 
                   <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="w-5 h-5 text-yellow-700 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-yellow-800">
-                        <strong>Warning:</strong> Restoring can modify or delete existing data. Always create a backup before restoring.
+                        <strong>Warning:</strong> Restoring can modify or delete existing data.
                       </p>
                     </div>
                   </div>
@@ -1146,6 +1299,224 @@ const AdminPanel: React.FC = () => {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Backup History Modal */}
+      {showBackupHistory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                  <Database className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Server Backups</h3>
+                  <p className="text-sm text-gray-600">Manage backup files stored on the server</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowBackupHistory(false);
+                  setSelectedServerBackup(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Restore Mode Selection */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-xl">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Restore Mode for Server Backups
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div
+                  onClick={() => setRestoreMode('merge')}
+                  className={`cursor-pointer p-3 border-2 rounded-lg transition-all ${
+                    restoreMode === 'merge'
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        restoreMode === 'merge'
+                          ? 'border-green-500 bg-green-500'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      {restoreMode === 'merge' && (
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      )}
+                    </div>
+                    <span
+                      className={`font-bold text-sm ${
+                        restoreMode === 'merge' ? 'text-green-900' : 'text-gray-700'
+                      }`}
+                    >
+                      Merge
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    Add backup data to existing records
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => setRestoreMode('overwrite')}
+                  className={`cursor-pointer p-3 border-2 rounded-lg transition-all ${
+                    restoreMode === 'overwrite'
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        restoreMode === 'overwrite'
+                          ? 'border-red-500 bg-red-500'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      {restoreMode === 'overwrite' && (
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      )}
+                    </div>
+                    <span
+                      className={`font-bold text-sm ${
+                        restoreMode === 'overwrite' ? 'text-red-900' : 'text-gray-700'
+                      }`}
+                    >
+                      Overwrite
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    ⚠️ DELETE all data and replace with backup
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Backups List */}
+            {loadingBackups ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+                <p className="text-gray-600 mt-4">Loading backups...</p>
+              </div>
+            ) : serverBackups.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📦</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Backups Found</h3>
+                <p className="text-gray-600">Create your first backup to get started</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {serverBackups.map((backup) => (
+                  <div
+                    key={backup.id}
+                    className={`bg-white border-2 rounded-xl p-4 hover:border-gray-300 transition-all duration-200 ${
+                      selectedServerBackup === backup.id ? 'border-purple-500 bg-purple-50' : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="text-lg font-bold text-gray-900">{backup.filename}</h4>
+                          {selectedServerBackup === backup.id && (
+                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded">
+                              SELECTED
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">Size:</span>{' '}
+                            <span className="font-semibold text-gray-900">{backup.fileSizeFormatted}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Created:</span>{' '}
+                            <span className="font-semibold text-gray-900">
+                              {new Date(backup.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Time:</span>{' '}
+                            <span className="font-semibold text-gray-900">
+                              {new Date(backup.createdAt).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">By:</span>{' '}
+                            <span className="font-semibold text-gray-900">
+                              {backup.user?.firstName} {backup.user?.lastName}
+                            </span>
+                          </div>
+                        </div>
+                        {backup.metadata?.counts && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            Total records: {Object.values(backup.metadata.counts).reduce((a: number, b: any) => a + Number(b), 0)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={() => handleDownloadBackup(backup.id, backup.filename)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Download backup"
+                        >
+                          <Download className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (selectedServerBackup === backup.id) {
+                              handleRestoreFromServer(backup.id, backup.filename);
+                            } else {
+                              setSelectedServerBackup(backup.id);
+                            }
+                          }}
+                          disabled={isRestoring}
+                          className={`p-2 rounded-lg transition-colors ${
+                            selectedServerBackup === backup.id
+                              ? restoreMode === 'overwrite'
+                                ? 'text-red-600 hover:bg-red-50'
+                                : 'text-green-600 hover:bg-green-50'
+                              : 'text-purple-600 hover:bg-purple-50'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={selectedServerBackup === backup.id ? `Restore (${restoreMode})` : 'Select for restore'}
+                        >
+                          {isRestoring && selectedServerBackup === backup.id ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
+                          ) : (
+                            <Upload className="w-5 h-5" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBackup(backup.id, backup.filename)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete backup"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedServerBackup && (
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-sm text-blue-900">
+                  <strong>💡 Tip:</strong> Click the upload icon again to restore the selected backup in <strong>{restoreMode}</strong> mode.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

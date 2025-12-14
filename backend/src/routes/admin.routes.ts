@@ -34,7 +34,19 @@ router.post('/seed-templates', adminController.seedTemplates);
 // POST /api/admin/backup - Create database backup (super_admin only)
 router.post('/backup', adminController.createBackup);
 
-// POST /api/admin/restore - Restore database from backup (super_admin only)
+// GET /api/admin/backup/history - Get backup history (super_admin only)
+router.get('/backup/history', adminController.getBackupHistory);
+
+// GET /api/admin/backup/:id/download - Download a specific backup (super_admin only)
+router.get('/backup/:id/download', adminController.downloadBackup);
+
+// POST /api/admin/backup/:id/restore - Restore from a server-stored backup (super_admin only)
+router.post('/backup/:id/restore', adminController.restoreFromServerBackup);
+
+// DELETE /api/admin/backup/:id - Delete a backup (super_admin only)
+router.delete('/backup/:id', adminController.deleteBackup);
+
+// POST /api/admin/restore - Restore database from uploaded backup file (super_admin only)
 router.post('/restore', adminController.restoreBackup);
 
 export default router;

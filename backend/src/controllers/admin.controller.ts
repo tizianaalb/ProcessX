@@ -2,6 +2,16 @@ import { Request, Response } from 'express';
 import { prisma } from '../services/prisma';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
+import fs from 'fs/promises';
+import path from 'path';
+
+// Ensure backups directory exists
+const BACKUPS_DIR = process.env.BACKUPS_DIR || path.join(process.cwd(), 'backups');
+fs.mkdir(BACKUPS_DIR, { recursive: true }).catch((err) => {
+  if (err.code !== 'EEXIST') {
+    console.error('Warning: Could not create backups directory:', err.message);
+  }
+});
 
 // Validation schema for user creation
 const createUserSchema = z.object({
@@ -621,6 +631,7 @@ export const seedTemplates = async (req: Request, res: Response) => {
 
 /**
  * Create database backup (super_admin only)
+ * Saves backup to disk and database
  */
 export const createBackup = async (req: Request, res: Response) => {
   try {
@@ -720,12 +731,42 @@ export const createBackup = async (req: Request, res: Response) => {
       typeof value === 'bigint' ? value.toString() : value
     );
 
-    res.setHeader('Content-Type', 'application/json');
-    res.send(JSON.stringify({
+    // Save backup to disk
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `processx-backup-${timestamp}.json`;
+    const filepath = path.join(BACKUPS_DIR, filename);
+
+    await fs.writeFile(filepath, backupString, 'utf-8');
+
+    // Get file size
+    const fileStats = await fs.stat(filepath);
+    const fileSize = fileStats.size;
+
+    // Create backup record in database
+    const backupRecord = await prisma.backup.create({
+      data: {
+        filename,
+        filepath,
+        fileSize: BigInt(fileSize),
+        metadata: backup,
+        createdBy: userId,
+      },
+    });
+
+    console.log(`💾 Backup saved to: ${filepath} (${fileSize} bytes)`);
+
+    res.json({
       success: true,
-      message: 'Backup created successfully',
-      backup: JSON.parse(backupString),
-    }));
+      message: 'Backup created and saved successfully',
+      backup: {
+        id: backupRecord.id,
+        filename,
+        fileSize,
+        fileSizeFormatted: formatBytes(fileSize),
+        stats: backup.counts,
+        timestamp: backup.timestamp,
+      },
+    });
   } catch (error) {
     console.error('Create backup error:', error);
     res.status(500).json({ error: 'Failed to create backup' });
@@ -1018,3 +1059,477 @@ export const restoreBackup = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Get backup history (super_admin only)
+ */
+export const getBackupHistory = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    // Get user and verify super_admin role
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super administrators can view backup history' });
+    }
+
+    // Get all backups
+    const backups = await prisma.backup.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    // Serialize BigInt values
+    const serializedBackups = backups.map((backup) => ({
+      ...backup,
+      fileSize: backup.fileSize.toString(),
+      fileSizeFormatted: formatBytes(Number(backup.fileSize)),
+    }));
+
+    res.json({
+      success: true,
+      backups: serializedBackups,
+    });
+  } catch (error) {
+    console.error('Get backup history error:', error);
+    res.status(500).json({ error: 'Failed to fetch backup history' });
+  }
+};
+
+/**
+ * Download a specific backup file (super_admin only)
+ */
+export const downloadBackup = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { id } = req.params;
+
+    // Get user and verify super_admin role
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super administrators can download backups' });
+    }
+
+    // Get backup record
+    const backup = await prisma.backup.findUnique({
+      where: { id },
+    });
+
+    if (!backup) {
+      return res.status(404).json({ error: 'Backup not found' });
+    }
+
+    // Check if file exists
+    try {
+      await fs.access(backup.filepath);
+    } catch {
+      return res.status(404).json({ error: 'Backup file not found on disk' });
+    }
+
+    // Read and send file
+    const fileContent = await fs.readFile(backup.filepath, 'utf-8');
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${backup.filename}"`);
+    res.send(fileContent);
+  } catch (error) {
+    console.error('Download backup error:', error);
+    res.status(500).json({ error: 'Failed to download backup' });
+  }
+};
+
+/**
+ * Restore from a server-stored backup (super_admin only)
+ */
+export const restoreFromServerBackup = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { id } = req.params;
+    const { mode } = req.body;
+
+    if (!mode || !['merge', 'overwrite'].includes(mode)) {
+      return res.status(400).json({ error: 'Invalid restore mode. Use "merge" or "overwrite"' });
+    }
+
+    // Get user and verify super_admin role
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super administrators can restore backups' });
+    }
+
+    // Get backup record
+    const backupRecord = await prisma.backup.findUnique({
+      where: { id },
+    });
+
+    if (!backupRecord) {
+      return res.status(404).json({ error: 'Backup not found' });
+    }
+
+    // Check if file exists
+    try {
+      await fs.access(backupRecord.filepath);
+    } catch {
+      return res.status(404).json({ error: 'Backup file not found on disk' });
+    }
+
+    // Read backup file
+    const fileContent = await fs.readFile(backupRecord.filepath, 'utf-8');
+    const backup = JSON.parse(fileContent);
+
+    console.log(`🔄 Restoring database from backup ${backupRecord.filename} (mode: ${mode})...`);
+    console.log(`📦 Backup version: ${backup.version}`);
+    console.log(`📅 Backup date: ${backup.timestamp}`);
+
+    if (mode === 'overwrite') {
+      console.log('⚠️  OVERWRITE MODE: Deleting existing data...');
+
+      // Delete all existing data in reverse dependency order
+      await prisma.$transaction(async (tx) => {
+        await tx.auditLog.deleteMany({});
+        await tx.aIAnalysis.deleteMany({});
+        await tx.aPIConfiguration.deleteMany({});
+        await tx.export.deleteMany({});
+        await tx.processRecommendation.deleteMany({});
+        await tx.recommendation.deleteMany({});
+        await tx.painPoint.deleteMany({});
+        await tx.processConnection.deleteMany({});
+        await tx.processStep.deleteMany({});
+        await tx.targetProcess.deleteMany({});
+        await tx.process.deleteMany({});
+        await tx.processTemplate.deleteMany({});
+        await tx.user.deleteMany({});
+        await tx.organization.deleteMany({});
+      });
+
+      console.log('✅ Existing data deleted');
+    }
+
+    console.log('📥 Importing backup data...');
+
+    // Restore data in correct dependency order
+    const result = await prisma.$transaction(async (tx) => {
+      // Restore organizations
+      const orgCount = backup.data.organizations?.length || 0;
+      if (orgCount > 0) {
+        for (const org of backup.data.organizations) {
+          await tx.organization.upsert({
+            where: { id: org.id },
+            update: org,
+            create: org,
+          });
+        }
+      }
+
+      // Restore users (without passwords - they'll need to reset)
+      const userCount = backup.data.users?.length || 0;
+      if (userCount > 0) {
+        for (const user of backup.data.users) {
+          await tx.user.upsert({
+            where: { id: user.id },
+            update: {
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role,
+              organizationId: user.organizationId,
+            },
+            create: {
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role,
+              organizationId: user.organizationId,
+              passwordHash: '$2b$10$dummyHashForRestoredUsers',
+            },
+          });
+        }
+      }
+
+      // Restore process templates
+      const templateCount = backup.data.processTemplates?.length || 0;
+      if (templateCount > 0) {
+        for (const template of backup.data.processTemplates) {
+          await tx.processTemplate.upsert({
+            where: { id: template.id },
+            update: template,
+            create: template,
+          });
+        }
+      }
+
+      // Restore processes
+      const processCount = backup.data.processes?.length || 0;
+      if (processCount > 0) {
+        for (const process of backup.data.processes) {
+          await tx.process.upsert({
+            where: { id: process.id },
+            update: process,
+            create: process,
+          });
+        }
+      }
+
+      // Restore target processes
+      const targetProcessCount = backup.data.targetProcesses?.length || 0;
+      if (targetProcessCount > 0) {
+        for (const targetProcess of backup.data.targetProcesses) {
+          await tx.targetProcess.upsert({
+            where: { id: targetProcess.id },
+            update: targetProcess,
+            create: targetProcess,
+          });
+        }
+      }
+
+      // Restore process steps
+      const stepCount = backup.data.processSteps?.length || backup.data.steps?.length || 0;
+      const steps = backup.data.processSteps || backup.data.steps || [];
+      if (stepCount > 0) {
+        for (const step of steps) {
+          await tx.processStep.upsert({
+            where: { id: step.id },
+            update: step,
+            create: step,
+          });
+        }
+      }
+
+      // Restore process connections
+      const connectionCount = backup.data.processConnections?.length || backup.data.connections?.length || 0;
+      const connections = backup.data.processConnections || backup.data.connections || [];
+      if (connectionCount > 0) {
+        for (const connection of connections) {
+          await tx.processConnection.upsert({
+            where: { id: connection.id },
+            update: connection,
+            create: connection,
+          });
+        }
+      }
+
+      // Restore pain points
+      const painPointCount = backup.data.painPoints?.length || 0;
+      if (painPointCount > 0) {
+        for (const painPoint of backup.data.painPoints) {
+          await tx.painPoint.upsert({
+            where: { id: painPoint.id },
+            update: painPoint,
+            create: painPoint,
+          });
+        }
+      }
+
+      // Restore recommendations
+      const recCount = backup.data.recommendations?.length || 0;
+      if (recCount > 0) {
+        for (const rec of backup.data.recommendations) {
+          await tx.recommendation.upsert({
+            where: { id: rec.id },
+            update: rec,
+            create: rec,
+          });
+        }
+      }
+
+      // Restore process recommendations
+      const processRecCount = backup.data.processRecommendations?.length || 0;
+      if (processRecCount > 0) {
+        for (const rec of backup.data.processRecommendations) {
+          await tx.processRecommendation.upsert({
+            where: { id: rec.id },
+            update: rec,
+            create: rec,
+          });
+        }
+      }
+
+      // Restore API configurations
+      const apiConfigCount = backup.data.apiConfigurations?.length || 0;
+      if (apiConfigCount > 0) {
+        for (const config of backup.data.apiConfigurations) {
+          await tx.aPIConfiguration.upsert({
+            where: { id: config.id },
+            update: config,
+            create: config,
+          });
+        }
+      }
+
+      // Restore exports
+      const exportCount = backup.data.exports?.length || 0;
+      if (exportCount > 0) {
+        for (const exp of backup.data.exports) {
+          await tx.export.upsert({
+            where: { id: exp.id },
+            update: exp,
+            create: exp,
+          });
+        }
+      }
+
+      // Restore AI analyses
+      const aiAnalysisCount = backup.data.aiAnalyses?.length || 0;
+      if (aiAnalysisCount > 0) {
+        for (const analysis of backup.data.aiAnalyses) {
+          await tx.aIAnalysis.upsert({
+            where: { id: analysis.id },
+            update: analysis,
+            create: analysis,
+          });
+        }
+      }
+
+      // Restore audit logs
+      const auditLogCount = backup.data.auditLogs?.length || 0;
+      if (auditLogCount > 0) {
+        for (const log of backup.data.auditLogs) {
+          await tx.auditLog.upsert({
+            where: { id: log.id },
+            update: log,
+            create: log,
+          });
+        }
+      }
+
+      return {
+        organizations: orgCount,
+        users: userCount,
+        processes: processCount,
+        processSteps: stepCount,
+        processConnections: connectionCount,
+        painPoints: painPointCount,
+        recommendations: recCount,
+        processRecommendations: processRecCount,
+        targetProcesses: targetProcessCount,
+        exports: exportCount,
+        processTemplates: templateCount,
+        apiConfigurations: apiConfigCount,
+        aiAnalyses: aiAnalysisCount,
+        auditLogs: auditLogCount,
+      };
+    });
+
+    console.log('✅ Database restore completed successfully');
+    console.log('📊 Restored records:', result);
+
+    res.json({
+      success: true,
+      message: `Database restored successfully from ${backupRecord.filename} in ${mode} mode`,
+      restored: result,
+    });
+  } catch (error) {
+    console.error('Restore from server backup error:', error);
+    res.status(500).json({
+      error: 'Failed to restore from server backup',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Delete a backup (super_admin only)
+ */
+export const deleteBackup = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { id } = req.params;
+
+    // Get user and verify super_admin role
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (currentUser.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super administrators can delete backups' });
+    }
+
+    // Get backup record
+    const backup = await prisma.backup.findUnique({
+      where: { id },
+    });
+
+    if (!backup) {
+      return res.status(404).json({ error: 'Backup not found' });
+    }
+
+    console.log(`🗑️  Deleting backup ${backup.filename}...`);
+
+    // Delete file from disk
+    try {
+      await fs.access(backup.filepath);
+      await fs.unlink(backup.filepath);
+      console.log(`✅ Deleted backup file: ${backup.filepath}`);
+    } catch (error) {
+      console.warn(`⚠️  Backup file not found on disk: ${backup.filepath}`);
+    }
+
+    // Delete backup record from database
+    await prisma.backup.delete({
+      where: { id },
+    });
+
+    console.log(`✅ Backup ${backup.filename} deleted successfully`);
+
+    res.json({
+      success: true,
+      message: 'Backup deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete backup error:', error);
+    res.status(500).json({ error: 'Failed to delete backup' });
+  }
+};
+
+/**
+ * Format bytes to human-readable size
+ */
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
