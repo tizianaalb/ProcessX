@@ -7,6 +7,7 @@ const createTemplateSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
   category: z.string().optional(),
+  subcategory: z.string().optional(),
   industrySector: z.string().default('insurance'),
   templateData: z.object({
     steps: z.array(z.any()),
@@ -21,6 +22,7 @@ const updateTemplateSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
   category: z.string().optional(),
+  subcategory: z.string().optional(),
   templateData: z.object({
     steps: z.array(z.any()),
     connections: z.array(z.any()),
