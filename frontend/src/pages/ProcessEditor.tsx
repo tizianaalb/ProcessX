@@ -48,6 +48,7 @@ import { ContextMenu, getNodeContextMenuItems, getEdgeContextMenuItems } from '.
 import { NodePropertiesPanel } from '../components/NodePropertiesPanel';
 import { NodePalette } from '../components/NodePalette';
 import { AIAnalysisPanel, AIAnalysisPanelToggle } from '../components/AIAnalysisPanel';
+import { EdgePropertiesPanel } from '../components/EdgePropertiesPanel';
 
 const nodeTypes = {
   start: StartNode,
@@ -90,6 +91,10 @@ const ProcessEditorInner = () => {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [editingPainPoint, setEditingPainPoint] = useState<PainPoint | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Edge editing state
+  const [showEdgePropertiesPanel, setShowEdgePropertiesPanel] = useState(false);
+  const [selectedEdgeForEdit, setSelectedEdgeForEdit] = useState<Edge | null>(null);
 
   // Context menu and properties panel state
   const [contextMenu, setContextMenu] = useState<{
@@ -278,9 +283,68 @@ const ProcessEditorInner = () => {
     []
   );
 
+  // Connection validation - BPMN rules
+  const isValidConnection = useCallback(
+    (connection: Connection) => {
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+
+      if (!sourceNode || !targetNode) return false;
+
+      // Rule 1: Cannot connect a node to itself
+      if (connection.source === connection.target) return false;
+
+      // Rule 2: End nodes cannot have outgoing connections
+      if (sourceNode.type === 'end') return false;
+
+      // Rule 3: Start nodes cannot have incoming connections
+      if (targetNode.type === 'start') return false;
+
+      // Rule 4: Annotations and DataObjects typically don't have connections
+      // (but we allow them for flexibility)
+
+      // Rule 5: Check if connection already exists
+      const connectionExists = edges.some(
+        (e) => e.source === connection.source && e.target === connection.target
+      );
+      if (connectionExists) return false;
+
+      return true;
+    },
+    [nodes, edges]
+  );
+
   const onConnect = useCallback(
-    (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
-    []
+    (connection: Connection) => {
+      if (!isValidConnection(connection)) {
+        // Show feedback for invalid connection
+        console.warn('Invalid connection attempted:', connection);
+        return;
+      }
+
+      // Determine edge type based on source node
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const isConditional = sourceNode?.type === 'decision' ||
+                           sourceNode?.type === 'inclusiveGateway' ||
+                           sourceNode?.type === 'eventGateway';
+
+      const newEdge = {
+        ...connection,
+        id: `edge-${Date.now()}`,
+        type: isConditional ? 'step' : 'default',
+        animated: isConditional,
+        label: connection.sourceHandle === 'yes' ? 'Yes' :
+               connection.sourceHandle === 'no' ? 'No' : '',
+        data: {
+          condition: '',
+          probability: undefined,
+          description: '',
+        },
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
+    },
+    [isValidConnection, nodes]
   );
 
   const addNode = (type: 'start' | 'task' | 'decision' | 'end' | 'parallelGateway' | 'subprocess' | 'userTask' | 'systemTask' | 'timer' | 'annotation' | 'inclusiveGateway' | 'eventGateway' | 'messageEvent' | 'errorEvent' | 'signalEvent' | 'dataObject' | 'group') => {
@@ -440,15 +504,38 @@ const ProcessEditorInner = () => {
   };
 
   const handleEditEdgeLabel = (edge: Edge) => {
-    const newLabel = prompt('Enter edge label:', edge.label || '');
-    if (newLabel !== null) {
-      setEdges((eds) =>
-        eds.map((e) =>
-          e.id === edge.id ? { ...e, label: newLabel } : e
-        )
-      );
-    }
+    setSelectedEdgeForEdit(edge);
+    setShowEdgePropertiesPanel(true);
     setContextMenu({ visible: false, x: 0, y: 0, type: null, target: null });
+  };
+
+  const handleSaveEdgeProperties = (
+    edgeId: string,
+    data: {
+      label?: string;
+      type?: string;
+      data?: {
+        condition?: string;
+        probability?: number;
+        description?: string;
+      };
+    }
+  ) => {
+    setEdges((eds) =>
+      eds.map((e) =>
+        e.id === edgeId
+          ? {
+              ...e,
+              label: data.label,
+              type: data.type,
+              animated: data.type === 'step',
+              data: { ...e.data, ...data.data },
+            }
+          : e
+      )
+    );
+    setShowEdgePropertiesPanel(false);
+    setSelectedEdgeForEdit(null);
   };
 
   const handleCreateProcess = async () => {
@@ -885,9 +972,14 @@ const ProcessEditorInner = () => {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            isValidConnection={isValidConnection}
             onNodeClick={handleNodeClick}
             onNodeContextMenu={onNodeContextMenu}
             onEdgeContextMenu={onEdgeContextMenu}
+            onEdgeClick={(_, edge) => {
+              setSelectedEdgeForEdit(edge);
+              setShowEdgePropertiesPanel(true);
+            }}
             onPaneClick={onPaneClick}
             onDrop={onDrop}
             onDragOver={onDragOver}
@@ -948,6 +1040,25 @@ const ProcessEditorInner = () => {
                 setSelectedNodeForEdit(null);
               }}
               onSave={handleSaveNodeProperties}
+            />
+          )}
+
+          {/* Edge Properties Panel */}
+          {showEdgePropertiesPanel && selectedEdgeForEdit && (
+            <EdgePropertiesPanel
+              edge={selectedEdgeForEdit}
+              sourceNodeLabel={nodes.find((n) => n.id === selectedEdgeForEdit.source)?.data?.label}
+              targetNodeLabel={nodes.find((n) => n.id === selectedEdgeForEdit.target)?.data?.label}
+              onClose={() => {
+                setShowEdgePropertiesPanel(false);
+                setSelectedEdgeForEdit(null);
+              }}
+              onSave={handleSaveEdgeProperties}
+              onDelete={(edgeId) => {
+                handleDeleteEdge(edgeId);
+                setShowEdgePropertiesPanel(false);
+                setSelectedEdgeForEdit(null);
+              }}
             />
           )}
 

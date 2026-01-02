@@ -25,11 +25,16 @@ if [ -f logs/frontend.pid ]; then
     FRONTEND_PID=$(cat logs/frontend.pid)
     if kill -0 $FRONTEND_PID 2>/dev/null; then
         kill $FRONTEND_PID 2>/dev/null
+        sleep 1
+        # Force kill if still running
+        kill -9 $FRONTEND_PID 2>/dev/null || true
         echo -e "${GREEN}✓ Frontend server stopped (PID: $FRONTEND_PID)${NC}"
     else
         echo -e "${YELLOW}  Frontend process not running${NC}"
     fi
     rm -f logs/frontend.pid
+else
+    echo -e "${YELLOW}  No frontend PID file found${NC}"
 fi
 
 # Kill any remaining vite processes specific to ProcessX
@@ -41,27 +46,43 @@ if [ -f logs/backend.pid ]; then
     BACKEND_PID=$(cat logs/backend.pid)
     if kill -0 $BACKEND_PID 2>/dev/null; then
         kill $BACKEND_PID 2>/dev/null
+        sleep 1
+        # Force kill if still running
+        kill -9 $BACKEND_PID 2>/dev/null || true
         echo -e "${GREEN}✓ Backend server stopped (PID: $BACKEND_PID)${NC}"
     else
         echo -e "${YELLOW}  Backend process not running${NC}"
     fi
     rm -f logs/backend.pid
+else
+    echo -e "${YELLOW}  No backend PID file found${NC}"
 fi
 
 # Kill any remaining tsx processes specific to ProcessX backend
-pkill -f "ProcessX/backend.*tsx watch" 2>/dev/null && echo -e "${GREEN}✓ Cleaned up remaining ProcessX tsx processes${NC}" || true
+pkill -f "ProcessX/backend.*tsx" 2>/dev/null && echo -e "${GREEN}✓ Cleaned up remaining ProcessX tsx processes${NC}" || true
 
-# Stop Docker services
+# Stop Docker services (optional - controlled by flag)
 echo -e "${YELLOW}[3/3] Stopping Docker services...${NC}"
-docker compose down
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✓ Docker services stopped${NC}"
+if [ "$1" == "--keep-db" ]; then
+    echo -e "${YELLOW}  Keeping Docker services running (--keep-db flag)${NC}"
 else
-    echo -e "${YELLOW}  Docker services might not be running${NC}"
+    if command -v docker &> /dev/null && docker info &> /dev/null; then
+        docker compose down 2>/dev/null
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ Docker services stopped${NC}"
+        else
+            echo -e "${YELLOW}  Docker services might not be running${NC}"
+        fi
+    else
+        echo -e "${YELLOW}  Docker not available, skipping${NC}"
+    fi
 fi
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}   All ProcessX services stopped${NC}"
 echo -e "${GREEN}========================================${NC}"
+echo ""
+echo -e "To start again: ${YELLOW}./start.sh${NC}"
+echo -e "To stop but keep database: ${YELLOW}./stop.sh --keep-db${NC}"
 echo ""

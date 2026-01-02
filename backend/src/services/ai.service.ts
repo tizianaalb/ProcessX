@@ -45,6 +45,22 @@ interface AIProviderConfig {
 
 export class AIService {
   /**
+   * Parse JSON response from AI, handling markdown code blocks
+   */
+  private static parseJSONResponse<T>(response: string): T {
+    let jsonString = response.trim();
+
+    // Strip markdown code blocks if present
+    jsonString = jsonString.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim();
+
+    try {
+      return JSON.parse(jsonString) as T;
+    } catch (error) {
+      throw new Error(`Failed to parse AI response as JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Get the default AI configuration for an organization
    */
   public static async getAIConfig(organizationId: string): Promise<AIProviderConfig> {
@@ -274,7 +290,8 @@ Return your analysis in the following JSON format:
 }`;
 
     try {
-      return await this.callAI(organizationId, prompt);
+      const result = await this.callAI(organizationId, prompt);
+      return this.parseJSONResponse<PainPointAnalysisResult>(result);
     } catch (error) {
       console.error('AI Analysis Error:', error);
       throw new Error('Failed to analyze process with AI');
@@ -357,7 +374,8 @@ Return your recommendations in the following JSON format:
 
     try {
       const result = await this.callAI(organizationId, prompt);
-      return result.recommendations || [];
+      const parsed = this.parseJSONResponse<{ recommendations: OptimizationRecommendation[] }>(result);
+      return parsed.recommendations || [];
     } catch (error) {
       console.error('AI Recommendation Error:', error);
       throw new Error('Failed to generate recommendations with AI');
@@ -401,6 +419,7 @@ Return your recommendations in the following JSON format:
     name: string;
     description: string;
     steps: Array<{
+      id?: string;
       name: string;
       description: string;
       type: 'START' | 'TASK' | 'DECISION' | 'END';
@@ -486,14 +505,29 @@ IMPORTANT:
 
     try {
       const result = await this.callAI(organizationId, prompt);
-      // Parse the result if it's a string
-      let jsonString = typeof result === 'string' ? result : JSON.stringify(result);
-
-      // Strip markdown code blocks if present
-      jsonString = jsonString.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
-
-      const parsed = JSON.parse(jsonString);
-      return parsed;
+      return this.parseJSONResponse<{
+        name: string;
+        description: string;
+        steps: Array<{
+          id?: string;
+          name: string;
+          description: string;
+          type: 'START' | 'TASK' | 'DECISION' | 'END';
+          duration?: number;
+          position: { x: number; y: number };
+          metadata?: {
+            responsibleRole?: string;
+            department?: string;
+            requiredSystems?: string[];
+          };
+        }>;
+        connections: Array<{
+          sourceStepId: string;
+          targetStepId: string;
+          label?: string;
+          type: 'DEFAULT' | 'CONDITIONAL';
+        }>;
+      }>(result);
     } catch (error) {
       console.error('AI Process Generation Error:', error);
       throw new Error('Failed to generate process from description with AI');
@@ -584,7 +618,20 @@ Return the process design in JSON format:
 }`;
 
     try {
-      return await this.callAI(organizationId, prompt);
+      const result = await this.callAI(organizationId, prompt);
+      return this.parseJSONResponse<{
+        name: string;
+        description: string;
+        steps: Array<{
+          name: string;
+          description: string;
+          type: string;
+          duration?: number;
+          improvements: string[];
+        }>;
+        summary: string;
+        expectedImprovements: string[];
+      }>(result);
     } catch (error) {
       console.error('AI Target Process Generation Error:', error);
       throw new Error('Failed to generate target process with AI');
