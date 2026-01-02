@@ -14,6 +14,9 @@ import aiGenerationRoutes from './routes/ai-generation.routes.js';
 import templateRoutes from './routes/template.routes.js';
 import bpmnRoutes from './routes/bpmn.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import analyticsRoutes from './routes/analytics.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+import reviewRoutes from './routes/review.routes.js';
 
 // Load environment variables
 dotenv.config();
@@ -90,11 +93,14 @@ app.use('/api/processes', aiGenerationRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api', bpmnRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 app.get('/api', (req, res) => {
   res.json({
     message: 'ProcessX API',
-    version: '1.0.2',
+    version: '1.1.0',
     endpoints: {
       health: '/health',
       auth: '/api/auth/*',
@@ -105,6 +111,9 @@ app.get('/api', (req, res) => {
       targetProcess: '/api/processes/:processId/target',
       admin: '/api/admin/*',
       settings: '/api/settings/*',
+      analytics: '/api/analytics/*',
+      notifications: '/api/notifications/*',
+      reviews: '/api/reviews/*',
     },
   });
 });

@@ -47,6 +47,9 @@ model User {
   initiatedAnalyses    AIAnalysis[]
   approvedRecommendations ProcessRecommendation[] @relation("ApprovedRecommendations")
   backups              Backup[]
+  notifications        Notification[]
+  reviewsRequested     ProcessReview[] @relation("ReviewRequester")
+  reviewsAssigned      ProcessReview[] @relation("ProcessReviewer")
 
   @@index([organizationId])
   @@index([email])
@@ -82,6 +85,8 @@ model Process {
   exports         Export[]
   aiAnalyses      AIAnalysis[]
   processRecommendations ProcessRecommendation[]
+  healthMetrics   ProcessHealthMetric[]
+  reviews         ProcessReview[]
 
   @@index([organizationId])
   @@index([createdById])
@@ -381,4 +386,65 @@ model Backup {
   @@index([createdBy])
   @@index([createdAt])
   @@map("backups")
+}
+
+// Process Health Metrics - Track process health scores over time
+model ProcessHealthMetric {
+  id          String    @id @default(uuid())
+  processId   String    @map("process_id")
+  score       Int       // 0-100 overall health score
+  complexity  Int       // Complexity score based on nodes/connections
+  bottlenecks Int       // Number of identified bottlenecks
+  cycleTime   Float?    @map("cycle_time") // Estimated cycle time in minutes
+  details     Json?     // Detailed breakdown of health factors
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  process     Process   @relation(fields: [processId], references: [id], onDelete: Cascade)
+
+  @@index([processId])
+  @@index([createdAt])
+  @@map("process_health_metrics")
+}
+
+// Notifications
+model Notification {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  type        String    // mention, review_request, approval, comment, system
+  title       String
+  content     String    @db.Text
+  link        String?   // Link to related resource
+  read        Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// Process Reviews - Approval workflow for processes
+model ProcessReview {
+  id          String    @id @default(uuid())
+  processId   String    @map("process_id")
+  requesterId String    @map("requester_id")
+  reviewerId  String?   @map("reviewer_id")
+  status      String    @default("pending") // pending, approved, rejected, changes_requested
+  comments    String?   @db.Text
+  decision    String?   // Final decision notes
+  requestedAt DateTime  @default(now()) @map("requested_at")
+  reviewedAt  DateTime? @map("reviewed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  process     Process   @relation(fields: [processId], references: [id], onDelete: Cascade)
+  requester   User      @relation("ReviewRequester", fields: [requesterId], references: [id])
+  reviewer    User?     @relation("ProcessReviewer", fields: [reviewerId], references: [id])
+
+  @@index([processId])
+  @@index([reviewerId])
+  @@index([status])
+  @@map("process_reviews")
 }

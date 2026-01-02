@@ -802,4 +802,227 @@ class ApiClient {
   }
 }
 
+// Analytics interfaces
+export interface ProcessHealthResult {
+  processId: string;
+  score: number;
+  complexity: number;
+  bottlenecks: number;
+  cycleTime: number | null;
+  details: {
+    overall: number;
+    complexity: {
+      score: number;
+      nodeCount: number;
+      connectionCount: number;
+      branchingFactor: number;
+      nestingDepth: number;
+    };
+    efficiency: {
+      score: number;
+      totalDuration: number;
+      bottleneckCount: number;
+      avgStepDuration: number;
+      criticalPathLength: number;
+    };
+    automation: {
+      score: number;
+      automatedSteps: number;
+      manualSteps: number;
+      automationRatio: number;
+    };
+    documentation: {
+      score: number;
+      stepsWithDescriptions: number;
+      stepsWithRoles: number;
+      completenessRatio: number;
+    };
+    riskFactors: string[];
+    recommendations: string[];
+  };
+  trend: 'improving' | 'stable' | 'declining' | 'new';
+}
+
+export interface OrganizationHealthSummary {
+  totalProcesses: number;
+  processesWithHealth: number;
+  averageScore: number;
+  healthyProcesses: number;
+  atRiskProcesses: number;
+  criticalProcesses: number;
+  distribution: {
+    excellent: number;
+    good: number;
+    fair: number;
+    poor: number;
+    critical: number;
+  };
+}
+
+export interface AnalyticsSummary {
+  processes: {
+    total: number;
+    active: number;
+    draft: number;
+  };
+  painPoints: {
+    open: number;
+    critical: number;
+  };
+  recommendations: {
+    pending: number;
+    implemented: number;
+  };
+  health: OrganizationHealthSummary;
+  recentActivity: Array<{
+    id: string;
+    name: string;
+    status: string;
+    updatedAt: string;
+  }>;
+}
+
+// Notification interfaces
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'mention' | 'review_request' | 'approval' | 'rejection' | 'comment' | 'system';
+  title: string;
+  content: string;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+  unreadCount: number;
+}
+
+// Review interfaces
+export interface ProcessReview {
+  id: string;
+  processId: string;
+  requesterId: string;
+  reviewerId: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'changes_requested';
+  comments: string | null;
+  decision: string | null;
+  requestedAt: string;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  process?: {
+    id: string;
+    name: string;
+    status: string;
+  };
+  requester?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  };
+  reviewer?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  } | null;
+}
+
+export interface CreateReviewData {
+  processId: string;
+  reviewerId?: string;
+  comments?: string;
+}
+
+export interface UpdateReviewData {
+  status: 'approved' | 'rejected' | 'changes_requested';
+  decision?: string;
+  comments?: string;
+}
+
+export interface ReviewStats {
+  pending: number;
+  approved: number;
+  rejected: number;
+  changesRequested: number;
+  avgReviewTime: number | null;
+}
+
 export const api = new ApiClient(API_URL);
+
+// Extend api with new methods
+export const analyticsApi = {
+  getOrganizationHealth: (): Promise<OrganizationHealthSummary> =>
+    api['request']('/api/analytics/health/organization'),
+
+  getProcessHealth: (processId: string, recalculate = false): Promise<ProcessHealthResult> =>
+    api['request'](`/api/analytics/health/processes/${processId}${recalculate ? '?recalculate=true' : ''}`),
+
+  calculateProcessHealth: (processId: string): Promise<ProcessHealthResult> =>
+    api['request'](`/api/analytics/health/processes/${processId}/calculate`, { method: 'POST' }),
+
+  getProcessHealthHistory: (processId: string, limit = 30): Promise<any[]> =>
+    api['request'](`/api/analytics/health/processes/${processId}/history?limit=${limit}`),
+
+  getSummary: (): Promise<AnalyticsSummary> =>
+    api['request']('/api/analytics/summary'),
+
+  getTrends: (days = 30): Promise<any> =>
+    api['request'](`/api/analytics/trends?days=${days}`),
+};
+
+export const notificationApi = {
+  getNotifications: (options?: { limit?: number; offset?: number; unreadOnly?: boolean }): Promise<NotificationsResponse> => {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.offset) params.append('offset', String(options.offset));
+    if (options?.unreadOnly) params.append('unreadOnly', 'true');
+    const queryString = params.toString();
+    return api['request'](`/api/notifications${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getUnreadCount: (): Promise<{ count: number }> =>
+    api['request']('/api/notifications/unread-count'),
+
+  markAsRead: (notificationId: string): Promise<Notification> =>
+    api['request'](`/api/notifications/${notificationId}/read`, { method: 'PATCH' }),
+
+  markAllAsRead: (): Promise<{ success: boolean; count: number }> =>
+    api['request']('/api/notifications/mark-all-read', { method: 'POST' }),
+
+  deleteNotification: (notificationId: string): Promise<{ success: boolean }> =>
+    api['request'](`/api/notifications/${notificationId}`, { method: 'DELETE' }),
+};
+
+export const reviewApi = {
+  createReview: (data: CreateReviewData): Promise<ProcessReview> =>
+    api['request']('/api/reviews', { method: 'POST', body: JSON.stringify(data) }),
+
+  getPendingReviews: (): Promise<ProcessReview[]> =>
+    api['request']('/api/reviews/pending'),
+
+  getMyRequests: (): Promise<ProcessReview[]> =>
+    api['request']('/api/reviews/my-requests'),
+
+  getReviewStats: (): Promise<ReviewStats> =>
+    api['request']('/api/reviews/stats'),
+
+  getProcessReviews: (processId: string): Promise<ProcessReview[]> =>
+    api['request'](`/api/reviews/process/${processId}`),
+
+  getReview: (reviewId: string): Promise<ProcessReview> =>
+    api['request'](`/api/reviews/${reviewId}`),
+
+  updateReview: (reviewId: string, data: UpdateReviewData): Promise<ProcessReview> =>
+    api['request'](`/api/reviews/${reviewId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  assignReviewer: (reviewId: string, reviewerId: string): Promise<ProcessReview> =>
+    api['request'](`/api/reviews/${reviewId}/assign`, { method: 'POST', body: JSON.stringify({ reviewerId }) }),
+
+  cancelReview: (reviewId: string): Promise<{ success: boolean }> =>
+    api['request'](`/api/reviews/${reviewId}`, { method: 'DELETE' }),
+};
