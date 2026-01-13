@@ -824,6 +824,7 @@ export const restoreBackup = async (req: Request, res: Response) => {
         await tx.targetProcess.deleteMany({});
         await tx.process.deleteMany({});
         await tx.processTemplate.deleteMany({});
+        await tx.backup.deleteMany({}); // Delete backups before users (foreign key constraint)
         await tx.user.deleteMany({});
         await tx.organization.deleteMany({});
       });
@@ -1232,6 +1233,7 @@ export const restoreFromServerBackup = async (req: Request, res: Response) => {
         await tx.targetProcess.deleteMany({});
         await tx.process.deleteMany({});
         await tx.processTemplate.deleteMany({});
+        await tx.backup.deleteMany({}); // Delete backups before users (foreign key constraint)
         await tx.user.deleteMany({});
         await tx.organization.deleteMany({});
       });
