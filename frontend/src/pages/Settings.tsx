@@ -36,6 +36,9 @@ interface Model {
   description: string;
 }
 
+// Use environment variable for API URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3100';
+
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -73,7 +76,7 @@ const Settings: React.FC = () => {
 
   const fetchConfigurations = async () => {
     try {
-      const response = await fetch('http://localhost:3100/api/settings/api-configurations', {
+      const response = await fetch(`${API_URL}/api/settings/api-configurations`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
@@ -93,7 +96,7 @@ const Settings: React.FC = () => {
   const fetchAvailableModels = async (provider: string) => {
     try {
       const response = await fetch(
-        `http://localhost:3100/api/settings/available-models/${provider}`,
+        `${API_URL}/api/settings/available-models/${provider}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
@@ -131,7 +134,7 @@ const Settings: React.FC = () => {
 
     try {
       const response = await fetch(
-        'http://localhost:3100/api/settings/validate-and-fetch-models',
+        `${API_URL}/api/settings/validate-and-fetch-models`,
         {
           method: 'POST',
           headers: {
@@ -175,7 +178,7 @@ const Settings: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3100/api/settings/api-configurations/${editingConfig.id}/models`,
+        `${API_URL}/api/settings/api-configurations/${editingConfig.id}/models`,
         {
           method: 'GET',
           headers: {
@@ -210,7 +213,7 @@ const Settings: React.FC = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://localhost:3100/api/settings/api-configurations', {
+      const response = await fetch(`${API_URL}/api/settings/api-configurations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -268,7 +271,7 @@ const Settings: React.FC = () => {
       }
 
       const response = await fetch(
-        `http://localhost:3100/api/settings/api-configurations/${editingConfig.id}`,
+        `${API_URL}/api/settings/api-configurations/${editingConfig.id}`,
         {
           method: 'PATCH',
           headers: {
@@ -305,7 +308,7 @@ const Settings: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3100/api/settings/api-configurations/${configId}`,
+        `${API_URL}/api/settings/api-configurations/${configId}`,
         {
           method: 'DELETE',
           headers: {
@@ -329,7 +332,7 @@ const Settings: React.FC = () => {
   const handleSetDefault = async (configId: string) => {
     try {
       const response = await fetch(
-        `http://localhost:3100/api/settings/api-configurations/${configId}/set-default`,
+        `${API_URL}/api/settings/api-configurations/${configId}/set-default`,
         {
           method: 'POST',
           headers: {
@@ -393,7 +396,7 @@ const Settings: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3100/api/settings/update-password', {
+      const response = await fetch(`${API_URL}/api/settings/update-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
