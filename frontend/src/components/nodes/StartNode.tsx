@@ -22,7 +22,7 @@ export const StartNode = React.memo(({ data, selected }: any) => {
       )}
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Bottom}
         className="w-2 h-2 !bg-green-700 border border-white hover:!bg-green-800 transition-colors"
       />
     </div>

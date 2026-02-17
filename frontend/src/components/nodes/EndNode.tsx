@@ -22,7 +22,7 @@ export const EndNode = React.memo(({ data, selected }: any) => {
       )}
       <Handle
         type="target"
-        position={Position.Left}
+        position={Position.Top}
         className="w-2 h-2 !bg-red-700 border border-white hover:!bg-red-800 transition-colors"
       />
     </div>

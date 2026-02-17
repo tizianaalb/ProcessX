@@ -39,12 +39,12 @@ export const TaskNode = React.memo(({ data, selected }: any) => {
       )}
       <Handle
         type="target"
-        position={Position.Left}
+        position={Position.Top}
         className="w-2 h-2 !bg-blue-700 border border-white hover:!bg-blue-800 transition-colors"
       />
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Bottom}
         className="w-2 h-2 !bg-blue-700 border border-white hover:!bg-blue-800 transition-colors"
       />
     </div>

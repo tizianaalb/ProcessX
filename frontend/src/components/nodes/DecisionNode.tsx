@@ -24,8 +24,8 @@ export const DecisionNode = React.memo(({ data, selected }: any) => {
       )}
       <Handle
         type="target"
-        position={Position.Left}
-        className="w-2 h-2 !bg-yellow-700 border border-white hover:!bg-yellow-800 transition-colors -left-1"
+        position={Position.Top}
+        className="w-2 h-2 !bg-yellow-700 border border-white hover:!bg-yellow-800 transition-colors -top-1"
       />
       <Handle
         type="source"
