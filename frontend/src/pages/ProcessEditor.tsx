@@ -12,7 +12,7 @@ import ReactFlow, {
   useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings, Sparkles, Lightbulb, Maximize2, Download } from 'lucide-react';
+import { AlertTriangle, Plus, ChevronRight, ChevronLeft, Home, Settings, Sparkles, Lightbulb, Maximize2, Download, GitCompare, Shield } from 'lucide-react';
 
 // Types for ReactFlow
 type Node = any;
@@ -49,6 +49,7 @@ import { NodePropertiesPanel } from '../components/NodePropertiesPanel';
 import { NodePalette } from '../components/NodePalette';
 import { AIAnalysisPanel, AIAnalysisPanelToggle } from '../components/AIAnalysisPanel';
 import { EdgePropertiesPanel } from '../components/EdgePropertiesPanel';
+import { ProcessValidationPanel } from '../components/ProcessValidationPanel';
 
 const nodeTypes = {
   start: StartNode,
@@ -95,6 +96,9 @@ const ProcessEditorInner = () => {
   // Edge editing state
   const [showEdgePropertiesPanel, setShowEdgePropertiesPanel] = useState(false);
   const [selectedEdgeForEdit, setSelectedEdgeForEdit] = useState<Edge | null>(null);
+
+  // Validation panel state
+  const [showValidationPanel, setShowValidationPanel] = useState(false);
 
   // Context menu and properties panel state
   const [contextMenu, setContextMenu] = useState<{
@@ -861,6 +865,15 @@ const ProcessEditorInner = () => {
                   <Lightbulb size={16} className="text-blue-600" />
                   Recommendations
                 </Button>
+                <Button
+                  onClick={() => navigate(`/processes/${id}/compare`)}
+                  variant="outline"
+                  className="text-sm flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100"
+                  title="Compare AS-IS vs TO-BE"
+                >
+                  <GitCompare size={16} className="text-green-600" />
+                  Compare
+                </Button>
               </div>
               <div className="h-8 w-px bg-gray-300"></div>
             </>
@@ -911,6 +924,16 @@ const ProcessEditorInner = () => {
           >
             <Maximize2 size={16} />
             Fit to View
+          </Button>
+          <Button
+            onClick={() => setShowValidationPanel(!showValidationPanel)}
+            disabled={!process}
+            variant="outline"
+            className={`flex items-center gap-2 ${showValidationPanel ? 'bg-blue-100 border-blue-400' : ''}`}
+            title="Validate process"
+          >
+            <Shield size={16} className="text-blue-600" />
+            Validate
           </Button>
           <Button
             onClick={handleExportBPMN}
@@ -1029,6 +1052,26 @@ const ProcessEditorInner = () => {
               />
               <AIAnalysisPanelToggle />
             </>
+          )}
+
+          {/* Validation Panel */}
+          {showValidationPanel && process && (
+            <ProcessValidationPanel
+              processId={process.id}
+              nodes={nodes}
+              edges={edges}
+              isFloating={true}
+              onClose={() => setShowValidationPanel(false)}
+              onIssueClick={(stepId) => {
+                const node = nodes.find((n) => n.id === stepId);
+                if (node && reactFlowInstance) {
+                  reactFlowInstance.setCenter(node.position.x, node.position.y, {
+                    zoom: 1.5,
+                    duration: 500,
+                  });
+                }
+              }}
+            />
           )}
 
           {/* Node Properties Panel */}

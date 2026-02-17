@@ -1026,3 +1026,153 @@ export const reviewApi = {
   cancelReview: (reviewId: string): Promise<{ success: boolean }> =>
     api['request'](`/api/reviews/${reviewId}`, { method: 'DELETE' }),
 };
+
+// Process Comparison interfaces
+export interface ComparisonMetrics {
+  stepsAdded: number;
+  stepsRemoved: number;
+  stepsModified: number;
+  totalDurationAsIs: number;
+  totalDurationToBe: number;
+  durationSavings: number;
+  durationSavingsPercent: number;
+  automationImprovement: number;
+  bottlenecksReduced: number;
+}
+
+export interface ProcessComparisonResult {
+  asIsProcess: {
+    id: string;
+    name: string;
+    description: string | null;
+    steps: any[];
+    connections: any[];
+    totalDuration: number;
+    stepCount: number;
+    automatedSteps: number;
+    manualSteps: number;
+  };
+  toBeProcess: {
+    id?: string;
+    name: string;
+    description: string | null;
+    steps: any[];
+    connections: any[];
+    totalDuration: number;
+    stepCount: number;
+    automatedSteps: number;
+    manualSteps: number;
+    source: 'ai_generated' | 'linked_process';
+  } | null;
+  metrics: ComparisonMetrics | null;
+  hasComparison: boolean;
+}
+
+// Validation interfaces
+export interface ValidationIssue {
+  id: string;
+  type: string;
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  stepId?: string;
+  stepName?: string;
+  connectionId?: string;
+  suggestion?: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  score: number;
+  issues: ValidationIssue[];
+  summary: {
+    errors: number;
+    warnings: number;
+    info: number;
+  };
+}
+
+// Automation Opportunity interfaces
+export interface AutomationCandidate {
+  stepId: string;
+  stepName: string;
+  stepType: string;
+  currentDuration: number;
+  estimatedSavings: number;
+  automationPotential: 'high' | 'medium' | 'low';
+  automationType: string;
+  reason: string;
+  complexity: 'simple' | 'moderate' | 'complex';
+}
+
+export interface AutomationOpportunityResult {
+  processId: string;
+  processName: string;
+  overallScore: number;
+  currentAutomationRatio: number;
+  potentialAutomationRatio: number;
+  totalManualSteps: number;
+  automationCandidates: AutomationCandidate[];
+  estimatedTimeSavings: number;
+  estimatedAnnualCostSavings: number;
+  quickWins: AutomationCandidate[];
+  summary: {
+    highPotential: number;
+    mediumPotential: number;
+    lowPotential: number;
+  };
+}
+
+// KPI Dashboard interfaces
+export interface KPIDashboardData {
+  processes: {
+    total: number;
+    active: number;
+    asIs: number;
+    toBe: number;
+  };
+  steps: {
+    total: number;
+    automated: number;
+    manual: number;
+    withRoles: number;
+  };
+  automation: {
+    ratio: number;
+    potentialSavings: number;
+  };
+  painPoints: {
+    open: number;
+    critical: number;
+    resolved: number;
+    resolutionRate: number;
+  };
+  health: OrganizationHealthSummary;
+  cycleTime: {
+    total: number;
+    average: number;
+  };
+}
+
+// Extended analytics API
+export const extendedAnalyticsApi = {
+  getProcessComparison: (processId: string): Promise<ProcessComparisonResult> =>
+    api['request'](`/api/analytics/comparison/${processId}`),
+
+  validateProcess: (processId: string): Promise<ValidationResult> =>
+    api['request'](`/api/analytics/validation/${processId}`),
+
+  validateProcessRealtime: (steps: any[], connections: any[]): Promise<ValidationResult> =>
+    api['request']('/api/analytics/validation/realtime', {
+      method: 'POST',
+      body: JSON.stringify({ steps, connections }),
+    }),
+
+  getAutomationOpportunities: (processId: string): Promise<AutomationOpportunityResult> =>
+    api['request'](`/api/analytics/automation/${processId}`),
+
+  getOrganizationAutomationSummary: (): Promise<any> =>
+    api['request']('/api/analytics/automation/organization/summary'),
+
+  getKPIDashboard: (): Promise<KPIDashboardData> =>
+    api['request']('/api/analytics/kpi/dashboard'),
+};

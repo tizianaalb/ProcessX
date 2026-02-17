@@ -10,9 +10,11 @@ import {
   FileText,
   RefreshCw,
   ChevronRight,
+  LayoutDashboard,
 } from 'lucide-react';
 import { analyticsApi, reviewApi, AnalyticsSummary, ReviewStats } from '../lib/api';
 import { Button } from '../components/ui/button';
+import { KPIDashboard } from '../components/KPIDashboard';
 
 export const Analytics: React.FC = () => {
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ export const Analytics: React.FC = () => {
   const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'kpi'>('kpi');
 
   useEffect(() => {
     fetchData();
@@ -98,6 +101,39 @@ export const Analytics: React.FC = () => {
           Refresh
         </Button>
       </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 mb-6 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('kpi')}
+          className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+            activeTab === 'kpi'
+              ? 'text-indigo-600 border-indigo-600'
+              : 'text-gray-500 border-transparent hover:text-gray-700'
+          }`}
+        >
+          <LayoutDashboard size={18} />
+          KPI Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+            activeTab === 'overview'
+              ? 'text-indigo-600 border-indigo-600'
+              : 'text-gray-500 border-transparent hover:text-gray-700'
+          }`}
+        >
+          <BarChart3 size={18} />
+          Detailed Overview
+        </button>
+      </div>
+
+      {/* KPI Dashboard Tab */}
+      {activeTab === 'kpi' && <KPIDashboard />}
+
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -344,6 +380,8 @@ export const Analytics: React.FC = () => {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

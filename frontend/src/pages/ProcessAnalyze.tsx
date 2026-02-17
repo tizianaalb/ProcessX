@@ -14,10 +14,13 @@ import {
   Trash2,
   Download,
   FileText,
+  Bot,
+  GitCompare,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { AIAnalysis, Process } from '../lib/api';
 import { Button } from '../components/ui/button';
+import { AutomationOpportunityPanel } from '../components/AutomationOpportunityPanel';
 
 type AnalysisType = 'FULL' | 'PAIN_POINTS' | 'RECOMMENDATIONS' | 'TO_BE';
 
@@ -34,6 +37,7 @@ export const ProcessAnalyze = () => {
   const [pollingAnalysisId, setPollingAnalysisId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedAnalysisId, setExpandedAnalysisId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'analysis' | 'automation'>('analysis');
 
   useEffect(() => {
     if (processId) {
@@ -222,6 +226,40 @@ export const ProcessAnalyze = () => {
               <Lightbulb size={16} />
               View Recommendations
             </Button>
+            <Button
+              onClick={() => navigate(`/processes/${processId}/compare`)}
+              variant="outline"
+              className="text-sm flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100"
+            >
+              <GitCompare size={16} />
+              Compare AS-IS vs TO-BE
+            </Button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex items-center gap-2 mt-4 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('analysis')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+                activeTab === 'analysis'
+                  ? 'text-purple-600 border-purple-600'
+                  : 'text-gray-500 border-transparent hover:text-gray-700'
+              }`}
+            >
+              <Sparkles size={18} />
+              AI Analysis
+            </button>
+            <button
+              onClick={() => setActiveTab('automation')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors border-b-2 -mb-[2px] ${
+                activeTab === 'automation'
+                  ? 'text-purple-600 border-purple-600'
+                  : 'text-gray-500 border-transparent hover:text-gray-700'
+              }`}
+            >
+              <Bot size={18} />
+              Automation Opportunities
+            </button>
           </div>
 
           <div className="flex justify-between items-center">
@@ -251,6 +289,19 @@ export const ProcessAnalyze = () => {
           </div>
         )}
 
+        {/* Automation Opportunities Tab */}
+        {activeTab === 'automation' && processId && (
+          <AutomationOpportunityPanel
+            processId={processId}
+            onStepClick={(stepId) => {
+              navigate(`/processes/${processId}/edit`);
+            }}
+          />
+        )}
+
+        {/* AI Analysis Tab */}
+        {activeTab === 'analysis' && (
+          <>
         {/* Start New Analysis Card */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex items-start gap-4">
@@ -725,6 +776,8 @@ export const ProcessAnalyze = () => {
             </div>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );

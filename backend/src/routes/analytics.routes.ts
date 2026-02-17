@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import processHealthService from '../services/processHealth.service.js';
+import processComparisonService from '../services/processComparison.service.js';
+import processValidationService from '../services/processValidation.service.js';
+import automationOpportunityService from '../services/automationOpportunity.service.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -288,6 +291,258 @@ router.get('/trends', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error getting analytics trends:', error);
     res.status(500).json({ error: 'Failed to get analytics trends' });
+  }
+});
+
+/**
+ * GET /api/analytics/comparison/:processId
+ * Get comparison between AS-IS and TO-BE process
+ */
+router.get('/comparison/:processId', async (req: Request, res: Response) => {
+  try {
+    const { processId } = req.params;
+
+    // Verify user has access to this process
+    const process = await prisma.process.findFirst({
+      where: {
+        id: processId,
+        organizationId: req.user!.organizationId,
+      },
+    });
+
+    if (!process) {
+      return res.status(404).json({ error: 'Process not found' });
+    }
+
+    const comparison = await processComparisonService.getProcessComparison(processId);
+    res.json(comparison);
+  } catch (error) {
+    console.error('Error getting process comparison:', error);
+    res.status(500).json({ error: 'Failed to get process comparison' });
+  }
+});
+
+/**
+ * GET /api/analytics/validation/:processId
+ * Validate a process and return issues
+ */
+router.get('/validation/:processId', async (req: Request, res: Response) => {
+  try {
+    const { processId } = req.params;
+
+    // Verify user has access to this process
+    const process = await prisma.process.findFirst({
+      where: {
+        id: processId,
+        organizationId: req.user!.organizationId,
+      },
+    });
+
+    if (!process) {
+      return res.status(404).json({ error: 'Process not found' });
+    }
+
+    const validation = await processValidationService.validateProcess(processId);
+    res.json(validation);
+  } catch (error) {
+    console.error('Error validating process:', error);
+    res.status(500).json({ error: 'Failed to validate process' });
+  }
+});
+
+/**
+ * POST /api/analytics/validation/realtime
+ * Validate process data in real-time (without saving)
+ */
+router.post('/validation/realtime', async (req: Request, res: Response) => {
+  try {
+    const { steps, connections } = req.body;
+
+    if (!steps || !Array.isArray(steps)) {
+      return res.status(400).json({ error: 'Steps array is required' });
+    }
+
+    const validation = processValidationService.validateProcessData(
+      steps,
+      connections || []
+    );
+    res.json(validation);
+  } catch (error) {
+    console.error('Error validating process data:', error);
+    res.status(500).json({ error: 'Failed to validate process data' });
+  }
+});
+
+/**
+ * GET /api/analytics/automation/:processId
+ * Get automation opportunity analysis for a process
+ */
+router.get('/automation/:processId', async (req: Request, res: Response) => {
+  try {
+    const { processId } = req.params;
+
+    // Verify user has access to this process
+    const process = await prisma.process.findFirst({
+      where: {
+        id: processId,
+        organizationId: req.user!.organizationId,
+      },
+    });
+
+    if (!process) {
+      return res.status(404).json({ error: 'Process not found' });
+    }
+
+    const analysis = await automationOpportunityService.analyzeProcess(processId);
+    res.json(analysis);
+  } catch (error) {
+    console.error('Error analyzing automation opportunities:', error);
+    res.status(500).json({ error: 'Failed to analyze automation opportunities' });
+  }
+});
+
+/**
+ * GET /api/analytics/automation/organization/summary
+ * Get organization-wide automation summary
+ */
+router.get('/automation/organization/summary', async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId;
+    const summary = await automationOpportunityService.getOrganizationSummary(organizationId);
+    res.json(summary);
+  } catch (error) {
+    console.error('Error getting organization automation summary:', error);
+    res.status(500).json({ error: 'Failed to get organization automation summary' });
+  }
+});
+
+/**
+ * GET /api/analytics/kpi/dashboard
+ * Get KPI dashboard data
+ */
+router.get('/kpi/dashboard', async (req: Request, res: Response) => {
+  try {
+    const organizationId = req.user!.organizationId;
+
+    // Get process counts by status
+    const processStats = await prisma.process.groupBy({
+      by: ['status', 'type'],
+      where: { organizationId },
+      _count: { id: true },
+    });
+
+    // Get total duration across all processes
+    const allSteps = await prisma.processStep.findMany({
+      where: {
+        process: { organizationId },
+      },
+      select: {
+        duration: true,
+        type: true,
+        responsibleRole: true,
+        requiredSystems: true,
+      },
+    });
+
+    // Calculate automation metrics
+    const automatedTypes = ['systemtask', 'system_task', 'automated', 'service'];
+    let totalDuration = 0;
+    let automatedSteps = 0;
+    let manualSteps = 0;
+    let stepsWithRoles = 0;
+
+    allSteps.forEach((step) => {
+      totalDuration += step.duration || 0;
+      const type = (step.type || '').toLowerCase();
+      if (automatedTypes.some((t) => type.includes(t)) ||
+          (step.requiredSystems && step.requiredSystems.length > 0)) {
+        automatedSteps++;
+      } else if (['task', 'usertask', 'user_task'].some((t) => type.includes(t))) {
+        manualSteps++;
+      }
+      if (step.responsibleRole) {
+        stepsWithRoles++;
+      }
+    });
+
+    // Get pain point statistics
+    const painPointStats = await prisma.painPoint.groupBy({
+      by: ['severity', 'status'],
+      where: {
+        process: { organizationId },
+      },
+      _count: { id: true },
+    });
+
+    const openPainPoints = painPointStats
+      .filter((s) => s.status === 'OPEN')
+      .reduce((sum, s) => sum + s._count.id, 0);
+
+    const criticalPainPoints = painPointStats
+      .filter((s) => s.status === 'OPEN' && s.severity === 'CRITICAL')
+      .reduce((sum, s) => sum + s._count.id, 0);
+
+    const resolvedPainPoints = painPointStats
+      .filter((s) => s.status === 'RESOLVED')
+      .reduce((sum, s) => sum + s._count.id, 0);
+
+    // Get health summary
+    const healthSummary = await processHealthService.getOrganizationHealthSummary(organizationId);
+
+    // Calculate KPIs
+    const totalProcesses = processStats.reduce((sum, s) => sum + s._count.id, 0);
+    const activeProcesses = processStats
+      .filter((s) => s.status === 'ACTIVE')
+      .reduce((sum, s) => sum + s._count.id, 0);
+    const asIsProcesses = processStats
+      .filter((s) => s.type === 'AS_IS')
+      .reduce((sum, s) => sum + s._count.id, 0);
+    const toBeProcesses = processStats
+      .filter((s) => s.type === 'TO_BE')
+      .reduce((sum, s) => sum + s._count.id, 0);
+
+    const automationRatio = allSteps.length > 0
+      ? Math.round((automatedSteps / allSteps.length) * 100)
+      : 0;
+
+    const avgCycleTime = totalProcesses > 0
+      ? Math.round(totalDuration / totalProcesses)
+      : 0;
+
+    res.json({
+      processes: {
+        total: totalProcesses,
+        active: activeProcesses,
+        asIs: asIsProcesses,
+        toBe: toBeProcesses,
+      },
+      steps: {
+        total: allSteps.length,
+        automated: automatedSteps,
+        manual: manualSteps,
+        withRoles: stepsWithRoles,
+      },
+      automation: {
+        ratio: automationRatio,
+        potentialSavings: manualSteps * 15, // Estimated minutes per manual step
+      },
+      painPoints: {
+        open: openPainPoints,
+        critical: criticalPainPoints,
+        resolved: resolvedPainPoints,
+        resolutionRate: (openPainPoints + resolvedPainPoints) > 0
+          ? Math.round((resolvedPainPoints / (openPainPoints + resolvedPainPoints)) * 100)
+          : 0,
+      },
+      health: healthSummary,
+      cycleTime: {
+        total: totalDuration,
+        average: avgCycleTime,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting KPI dashboard:', error);
+    res.status(500).json({ error: 'Failed to get KPI dashboard' });
   }
 });
 

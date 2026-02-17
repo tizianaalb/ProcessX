@@ -8,6 +8,7 @@ import { ProcessList } from './pages/ProcessList';
 import { ProcessEditor } from './pages/ProcessEditor';
 import { ProcessAnalyze } from './pages/ProcessAnalyze';
 import { ProcessRecommendations } from './pages/ProcessRecommendations';
+import { ProcessComparison } from './pages/ProcessComparison';
 import Settings from './pages/Settings';
 import AdminPanel from './pages/AdminPanel';
 import Analytics from './pages/Analytics';
@@ -74,6 +75,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProcessRecommendations />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/processes/:id/compare"
+            element={
+              <ProtectedRoute>
+                <ProcessComparison />
               </ProtectedRoute>
             }
           />
