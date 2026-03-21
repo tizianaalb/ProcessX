@@ -67,7 +67,7 @@ FRONTEND TESTS:
 ===============
 
 ✓ Frontend Server
-  - URL: http://localhost:5200
+  - URL: http://localhost:5000
   - Status: Running
   - Serves: ProcessX application HTML
 

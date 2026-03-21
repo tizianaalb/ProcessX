@@ -251,7 +251,7 @@ If no token:
 Create a `.env` file in the frontend directory:
 
 ```env
-VITE_API_URL=http://localhost:3100
+VITE_API_URL=http://localhost:4200
 ```
 
 **Note:** Vite requires all environment variables to be prefixed with `VITE_`
@@ -260,7 +260,7 @@ VITE_API_URL=http://localhost:3100
 
 ### Base URL
 ```typescript
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3100';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4200';
 ```
 
 ### Request Headers

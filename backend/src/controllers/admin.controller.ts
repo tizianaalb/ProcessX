@@ -671,7 +671,7 @@ export const createBackup = async (req: Request, res: Response) => {
       auditLogs,
     ] = await Promise.all([
       prisma.organization.findMany(),
-      prisma.user.findMany({ select: { id: true, email: true, firstName: true, lastName: true, role: true, organizationId: true, createdAt: true, updatedAt: true } }),
+      prisma.user.findMany({ select: { id: true, email: true, firstName: true, lastName: true, role: true, organizationId: true, passwordHash: true, createdAt: true, updatedAt: true } }),
       prisma.process.findMany(),
       prisma.processStep.findMany(),
       prisma.processConnection.findMany(),
@@ -862,6 +862,7 @@ export const restoreBackup = async (req: Request, res: Response) => {
                 lastName: user.lastName,
                 role: user.role,
                 organizationId: user.organizationId,
+                ...(user.passwordHash && { passwordHash: user.passwordHash }),
               },
               create: {
                 id: user.id,
@@ -870,7 +871,7 @@ export const restoreBackup = async (req: Request, res: Response) => {
                 lastName: user.lastName,
                 role: user.role,
                 organizationId: user.organizationId,
-                passwordHash: '$2b$10$dummyHashForRestoredUsers', // Dummy hash - users must reset password
+                passwordHash: user.passwordHash || '$2b$10$dummyHashForRestoredUsers',
               },
             });
           }
@@ -962,6 +963,18 @@ export const restoreBackup = async (req: Request, res: Response) => {
           }
         }
 
+        // Restore AI analyses (before processRecommendations which reference them)
+        const aiAnalysisCount = backup.data.aiAnalyses?.length || 0;
+        if (aiAnalysisCount > 0) {
+          for (const analysis of backup.data.aiAnalyses) {
+            await tx.aIAnalysis.upsert({
+              where: { id: analysis.id },
+              update: analysis,
+              create: analysis,
+            });
+          }
+        }
+
         // Restore process recommendations
         const processRecCount = backup.data.processRecommendations?.length || 0;
         if (processRecCount > 0) {
@@ -994,18 +1007,6 @@ export const restoreBackup = async (req: Request, res: Response) => {
               where: { id: exp.id },
               update: exp,
               create: exp,
-            });
-          }
-        }
-
-        // Restore AI analyses
-        const aiAnalysisCount = backup.data.aiAnalyses?.length || 0;
-        if (aiAnalysisCount > 0) {
-          for (const analysis of backup.data.aiAnalyses) {
-            await tx.aIAnalysis.upsert({
-              where: { id: analysis.id },
-              update: analysis,
-              create: analysis,
             });
           }
         }

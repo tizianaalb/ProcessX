@@ -8,8 +8,8 @@ Your ProcessX application is currently up and running with the following service
 
 | Service | Status | URL | Credentials |
 |---------|--------|-----|-------------|
-| **Frontend** | ✅ Running | http://localhost:5200 | N/A |
-| **Backend API** | ✅ Running | http://localhost:3100 | N/A |
+| **Frontend** | ✅ Running | http://localhost:5000 | N/A |
+| **Backend API** | ✅ Running | http://localhost:4200 | N/A |
 | **PostgreSQL** | ✅ Running | localhost:5100 | user: `postgres`, pass: `postgres` |
 | **Redis** | ✅ Running | localhost:6100 | N/A |
 | **pgAdmin** | ✅ Running | http://localhost:4100 | user: `admin@processx.local`, pass: `admin` |
@@ -20,7 +20,7 @@ Your ProcessX application is currently up and running with the following service
 
 Open your browser and navigate to:
 ```
-http://localhost:5200
+http://localhost:5000
 ```
 
 ### 2. Register a New Account
@@ -66,7 +66,7 @@ Once logged in, you'll see:
 
 **Session Persistence:**
 - Close the browser
-- Reopen and navigate to http://localhost:5200
+- Reopen and navigate to http://localhost:5000
 - You should still be logged in (token stored in localStorage)
 
 ## Testing the API Directly
@@ -75,7 +75,7 @@ You can test the backend API using curl:
 
 ### Health Check
 ```bash
-curl http://localhost:3100/health
+curl http://localhost:4200/health
 ```
 
 Expected response:
@@ -85,7 +85,7 @@ Expected response:
 
 ### Register a User
 ```bash
-curl -X POST http://localhost:3100/api/auth/register \
+curl -X POST http://localhost:4200/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -118,7 +118,7 @@ Expected response:
 
 ### Login
 ```bash
-curl -X POST http://localhost:3100/api/auth/login \
+curl -X POST http://localhost:4200/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -131,7 +131,7 @@ curl -X POST http://localhost:3100/api/auth/login \
 # First, save the token from register or login response
 TOKEN="your-jwt-token-here"
 
-curl http://localhost:3100/api/auth/me \
+curl http://localhost:4200/api/auth/me \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -302,11 +302,11 @@ npx tsc --noEmit
 **Symptoms:** "Failed to fetch" errors, network errors in browser console
 
 **Solutions:**
-1. Verify backend is running: `curl http://localhost:3100/health`
+1. Verify backend is running: `curl http://localhost:4200/health`
 2. Check browser console for CORS errors
 3. Verify frontend .env has correct API URL:
    ```env
-   VITE_API_URL=http://localhost:3100
+   VITE_API_URL=http://localhost:4200
    ```
 4. Restart frontend after .env changes:
    ```bash
@@ -467,8 +467,8 @@ npx prisma studio
 # Opens at http://localhost:5555
 
 # Check service status
-curl http://localhost:3100/health  # Backend
-curl http://localhost:5200          # Frontend
+curl http://localhost:4200/health  # Backend
+curl http://localhost:5000          # Frontend
 docker ps                            # Docker services
 
 # Rebuild everything
@@ -489,4 +489,4 @@ Your ProcessX application is fully set up and ready for development. You have:
 - ✅ All tests passing
 - ✅ Development servers running with hot-reload
 
-Navigate to **http://localhost:5200** to start using the application!
+Navigate to **http://localhost:5000** to start using the application!

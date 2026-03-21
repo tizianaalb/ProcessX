@@ -21,14 +21,14 @@ ProcessX uses custom ports to avoid conflicts with other applications running on
 **File: `backend/.env`**
 ```env
 PORT=3100
-FRONTEND_URL=http://localhost:5200
+FRONTEND_URL=http://localhost:5000
 DATABASE_URL="postgresql://postgres:postgres@localhost:5100/processx?schema=public"
 ```
 
 **File: `backend/.env.example`**
 ```env
 PORT=3100
-FRONTEND_URL=http://localhost:5200
+FRONTEND_URL=http://localhost:5000
 DATABASE_URL="postgresql://user:password@localhost:5100/processx?schema=public"
 ```
 
@@ -37,7 +37,7 @@ DATABASE_URL="postgresql://user:password@localhost:5100/processx?schema=public"
 const PORT = process.env.PORT || 3100;
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5200',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5000',
   credentials: true,
 }));
 ```
@@ -46,12 +46,12 @@ app.use(cors({
 
 **File: `frontend/.env`**
 ```env
-VITE_API_URL=http://localhost:3100
+VITE_API_URL=http://localhost:4200
 ```
 
 **File: `frontend/.env.example`**
 ```env
-VITE_API_URL=http://localhost:3100
+VITE_API_URL=http://localhost:4200
 ```
 
 **File: `frontend/vite.config.ts`**
@@ -66,7 +66,7 @@ export default defineConfig({
 
 **File: `frontend/src/lib/api.ts`**
 ```typescript
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3100';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4200';
 ```
 
 ### Docker Configuration
@@ -89,9 +89,9 @@ services:
 
 Once all services are running, access them at:
 
-- **Frontend Application**: http://localhost:5200
-- **Backend API**: http://localhost:3100
-- **API Health Check**: http://localhost:3100/health
+- **Frontend Application**: http://localhost:5000
+- **Backend API**: http://localhost:4200
+- **API Health Check**: http://localhost:4200/health
 - **pgAdmin**: http://localhost:4100
   - Email: admin@processx.local
   - Password: admin
@@ -107,12 +107,12 @@ docker-compose up -d
 # Start backend (in separate terminal)
 cd backend
 npm run dev
-# Backend will run on http://localhost:3100
+# Backend will run on http://localhost:4200
 
 # Start frontend (in separate terminal)
 cd frontend
 npm run dev
-# Frontend will run on http://localhost:5200
+# Frontend will run on http://localhost:5000
 ```
 
 ### Option 2: Manual Setup
@@ -158,16 +158,16 @@ netstat -ano | findstr :6100
 
 ### Test Backend API:
 ```bash
-curl http://localhost:3100/health
+curl http://localhost:4200/health
 # Should return: {"status":"ok","timestamp":"..."}
 ```
 
 ### Test Frontend:
 ```bash
 # Open browser
-open http://localhost:5200
+open http://localhost:5000
 # or
-xdg-open http://localhost:5200
+xdg-open http://localhost:5000
 ```
 
 ## Firewall Configuration
@@ -203,7 +203,7 @@ server {
     server_name app.processx.com;
 
     location / {
-        proxy_pass http://localhost:5200;
+        proxy_pass http://localhost:5000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -218,7 +218,7 @@ server {
     server_name api.processx.com;
 
     location / {
-        proxy_pass http://localhost:3100;
+        proxy_pass http://localhost:4200;
         proxy_http_version 1.1;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -253,7 +253,7 @@ taskkill /PID <PID> /F  # Windows
 **Symptoms:** Network errors, CORS errors, "Failed to fetch"
 
 **Checklist:**
-1. Verify backend is running: `curl http://localhost:3100/health`
+1. Verify backend is running: `curl http://localhost:4200/health`
 2. Check CORS configuration in `backend/src/index.ts`
 3. Verify frontend API URL in `frontend/.env`
 4. Check browser console for specific errors
@@ -295,7 +295,7 @@ JWT_EXPIRES_IN=7d
 ### Frontend `.env`
 ```env
 # API
-VITE_API_URL=http://localhost:3100
+VITE_API_URL=http://localhost:4200
 ```
 
 ## Notes

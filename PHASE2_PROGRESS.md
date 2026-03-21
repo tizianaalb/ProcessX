@@ -131,7 +131,7 @@ model ProcessConnection {
 
 ### Create Process
 ```bash
-curl -X POST http://localhost:3100/api/processes \
+curl -X POST http://localhost:4200/api/processes \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -143,7 +143,7 @@ curl -X POST http://localhost:3100/api/processes \
 
 ### Add Steps
 ```bash
-curl -X POST http://localhost:3100/api/processes/PROCESS_ID/steps \
+curl -X POST http://localhost:4200/api/processes/PROCESS_ID/steps \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -165,7 +165,7 @@ curl -X POST http://localhost:3100/api/processes/PROCESS_ID/steps \
 
 ### Add Connections
 ```bash
-curl -X POST http://localhost:3100/api/processes/PROCESS_ID/connections \
+curl -X POST http://localhost:4200/api/processes/PROCESS_ID/connections \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

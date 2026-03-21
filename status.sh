@@ -30,12 +30,12 @@ fi
 echo ""
 
 # Check backend
-echo -e "${BLUE}Backend Server (Port 3100):${NC}"
+echo -e "${BLUE}Backend Server (Port 4200):${NC}"
 if [ -f logs/backend.pid ]; then
     BACKEND_PID=$(cat logs/backend.pid)
     if kill -0 $BACKEND_PID 2>/dev/null; then
         echo -e "${GREEN}✓ Running (PID: $BACKEND_PID)${NC}"
-        if curl -s http://localhost:3100/health > /dev/null 2>&1; then
+        if curl -s http://localhost:4200/health > /dev/null 2>&1; then
             echo -e "${GREEN}✓ Health check passed${NC}"
         else
             echo -e "${RED}✗ Health check failed${NC}"
@@ -49,12 +49,12 @@ fi
 echo ""
 
 # Check frontend
-echo -e "${BLUE}Frontend Server (Port 5200):${NC}"
+echo -e "${BLUE}Frontend Server (Port 5000):${NC}"
 if [ -f logs/frontend.pid ]; then
     FRONTEND_PID=$(cat logs/frontend.pid)
     if kill -0 $FRONTEND_PID 2>/dev/null; then
         echo -e "${GREEN}✓ Running (PID: $FRONTEND_PID)${NC}"
-        if curl -s http://localhost:5200 > /dev/null 2>&1; then
+        if curl -s http://localhost:5000 > /dev/null 2>&1; then
             echo -e "${GREEN}✓ Responding to requests${NC}"
         else
             echo -e "${RED}✗ Not responding${NC}"
@@ -78,9 +78,9 @@ echo ""
 
 # Access URLs
 echo -e "${BLUE}Access URLs:${NC}"
-echo -e "  Frontend:    ${GREEN}http://localhost:5200${NC}"
-echo -e "  Backend API: ${GREEN}http://localhost:3100${NC}"
-echo -e "  API Health:  ${GREEN}http://localhost:3100/health${NC}"
+echo -e "  Frontend:    ${GREEN}http://localhost:5000${NC}"
+echo -e "  Backend API: ${GREEN}http://localhost:4200${NC}"
+echo -e "  API Health:  ${GREEN}http://localhost:4200/health${NC}"
 echo -e "  pgAdmin:     ${GREEN}http://localhost:4100${NC}"
 echo ""
 

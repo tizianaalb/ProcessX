@@ -94,7 +94,7 @@ cd ..
 
 # Start backend
 echo -e "${GREEN}[5/5] Starting application servers...${NC}"
-echo -e "${YELLOW}  Starting backend server (port 3100)...${NC}"
+echo -e "${YELLOW}  Starting backend server (port 4200)...${NC}"
 cd backend
 npm run dev > ../logs/backend.log 2>&1 &
 BACKEND_PID=$!
@@ -104,7 +104,7 @@ cd ..
 # Wait for backend to start
 echo -e "${YELLOW}  Waiting for backend to initialize...${NC}"
 RETRIES=20
-until curl -s http://localhost:3100/health > /dev/null 2>&1; do
+until curl -s http://localhost:4200/health > /dev/null 2>&1; do
     RETRIES=$((RETRIES - 1))
     if [ $RETRIES -le 0 ]; then
         echo -e "${RED}✗ Backend server failed to start${NC}"
@@ -116,7 +116,7 @@ done
 echo -e "${GREEN}✓ Backend server started (PID: $BACKEND_PID)${NC}"
 
 # Start frontend
-echo -e "${YELLOW}  Starting frontend server (port 5200)...${NC}"
+echo -e "${YELLOW}  Starting frontend server (port 5000)...${NC}"
 cd frontend
 npm run dev > ../logs/frontend.log 2>&1 &
 FRONTEND_PID=$!
@@ -125,7 +125,7 @@ cd ..
 
 # Wait for frontend to start
 sleep 5
-if curl -s http://localhost:5200 > /dev/null 2>&1; then
+if curl -s http://localhost:5000 > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Frontend server started (PID: $FRONTEND_PID)${NC}"
 else
     # Check the log for the actual port
@@ -143,9 +143,9 @@ echo -e "${GREEN}   ProcessX is running!${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 echo -e "Access URLs:"
-echo -e "  ${GREEN}Frontend:${NC}    http://localhost:5200"
-echo -e "  ${GREEN}Backend API:${NC} http://localhost:3100"
-echo -e "  ${GREEN}API Health:${NC}  http://localhost:3100/health"
+echo -e "  ${GREEN}Frontend:${NC}    http://localhost:5000"
+echo -e "  ${GREEN}Backend API:${NC} http://localhost:4200"
+echo -e "  ${GREEN}API Health:${NC}  http://localhost:4200/health"
 echo -e "  ${GREEN}pgAdmin:${NC}     http://localhost:4100"
 echo -e "                 Email: admin@processx.local"
 echo -e "                 Password: admin"

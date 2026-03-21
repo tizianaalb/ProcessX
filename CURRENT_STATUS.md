@@ -128,8 +128,8 @@ Custom port mapping to avoid conflicts with existing services:
 
 | Service | Port | URL |
 |---------|------|-----|
-| Backend API | 3100 | http://localhost:3100 |
-| Frontend Dev Server | 5200 | http://localhost:5200 |
+| Backend API | 3100 | http://localhost:4200 |
+| Frontend Dev Server | 5200 | http://localhost:5000 |
 | PostgreSQL | 5100 | postgresql://localhost:5100 |
 | Redis | 6100 | redis://localhost:6100 |
 | pgAdmin | 4100 | http://localhost:4100 |
@@ -260,7 +260,7 @@ model ProcessConnection {
 ### Authentication
 ```bash
 # Register
-curl -X POST http://localhost:3100/api/auth/register \
+curl -X POST http://localhost:4200/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -271,7 +271,7 @@ curl -X POST http://localhost:3100/api/auth/register \
   }'
 
 # Login
-curl -X POST http://localhost:3100/api/auth/login \
+curl -X POST http://localhost:4200/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -282,7 +282,7 @@ curl -X POST http://localhost:3100/api/auth/login \
 ### Process Management
 ```bash
 # Create Process
-curl -X POST http://localhost:3100/api/processes \
+curl -X POST http://localhost:4200/api/processes \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -292,7 +292,7 @@ curl -X POST http://localhost:3100/api/processes \
   }'
 
 # Add Steps
-curl -X POST http://localhost:3100/api/processes/PROCESS_ID/steps \
+curl -X POST http://localhost:4200/api/processes/PROCESS_ID/steps \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -312,7 +312,7 @@ curl -X POST http://localhost:3100/api/processes/PROCESS_ID/steps \
   }'
 
 # Add Connections
-curl -X POST http://localhost:3100/api/processes/PROCESS_ID/connections \
+curl -X POST http://localhost:4200/api/processes/PROCESS_ID/connections \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -634,8 +634,8 @@ cp frontend/.env.example frontend/.env
 ./start.sh
 
 # Access application
-# Frontend: http://localhost:5200
-# Backend API: http://localhost:3100
+# Frontend: http://localhost:5000
+# Backend API: http://localhost:4200
 # pgAdmin: http://localhost:4100
 ```
 

@@ -37,7 +37,7 @@ interface Model {
 }
 
 // Use environment variable for API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3100';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4200';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();

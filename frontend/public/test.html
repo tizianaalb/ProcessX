@@ -32,7 +32,7 @@
 
         <h2>Next Steps:</h2>
         <ol>
-            <li>Go back to <a href="/">http://localhost:5200</a></li>
+            <li>Go back to <a href="/">http://localhost:5000</a></li>
             <li>Open browser DevTools (F12)</li>
             <li>Check Console tab for any JavaScript errors</li>
             <li>Check Network tab to see if files are loading</li>
@@ -42,7 +42,7 @@
         <p id="backend-status">Checking...</p>
 
         <script>
-            fetch('http://localhost:3100/health')
+            fetch('http://localhost:4200/health')
                 .then(r => r.json())
                 .then(data => {
                     document.getElementById('backend-status').innerHTML =
