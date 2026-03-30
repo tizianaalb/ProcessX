@@ -25,6 +25,7 @@
     "react-router-dom": "^7.9.6",
     "reactflow": "^11.11.0",
     "recharts": "^3.5.1",
+    "serve": "^14.2.6",
     "tailwind-merge": "^3.4.0",
     "zustand": "^5.0.8"
   },
